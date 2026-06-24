@@ -217,7 +217,7 @@ curl --max-time 3 -N "http://127.0.0.1:8765/api/fire-events/stream"
 
 ## 五、真实海康设备运行方式
 
-仓库已提交可执行包 `target/infrared-camera-1.0.0.jar`，Windows 服务器拉取代码后可直接双击运行真实设备模式：
+仓库已提交可执行包 `target/infrared-camera-1.0.0.jar` 和海康 Windows SDK 运行库 `EN-HCNetSDKV6.1.9.4_build20220412_win64/lib/`，Windows 服务器拉取代码后可直接双击运行真实设备模式：
 
 ```text
 start-hikvision-fire-detection.bat
@@ -244,7 +244,7 @@ java -jar target/infrared-camera-1.0.0.jar \
 
 说明：
 
-- 服务器只需 `git pull` 获取最新代码和 `target/infrared-camera-1.0.0.jar`，无需先安装 Maven 打包即可运行脚本。
+- 服务器只需 `git pull` 获取最新代码、`target/infrared-camera-1.0.0.jar` 和 `EN-HCNetSDKV6.1.9.4_build20220412_win64/lib/`，无需先安装 Maven 打包或手动拷贝 SDK 即可运行脚本。
 - 页面主体只展示 `/api/live-frame` 返回的热成像抓图，红色像素标注会按火源高亮轮廓叠加在真实画面上。
 - 当前抓图刷新为秒级刷新，不是 25fps 视频流；如需低延迟视频，后续需要单独接 RTSP 转 HLS/WebRTC。
 - 收到火点事件后会先更新本地页面，再异步向 ThingsBoard 上报遥测；未配置 `--thingsboard-host` 或 `--thingsboard-token` 时不上报云端。

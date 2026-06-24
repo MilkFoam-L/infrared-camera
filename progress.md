@@ -358,3 +358,21 @@
 - `docs/thermal-fire-detection-plan.md`：补充服务器无需 Maven 打包即可运行脚本的说明。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：可执行本轮提交的 `git revert` 回滚 Jar 提交；或删除仓库中的 `target/infrared-camera-1.0.0.jar` 并恢复 `.gitignore` 为完整忽略 `target/`。
+
+## 2026-06-24 - Task: 提交海康 SDK 运行库供服务器直接运行
+
+### What was done
+- 检查海康 SDK 整包约 479MB，决定只提交启动脚本实际需要的 Windows SDK 运行库 `lib/`，不提交文档和 C# demo 全包。
+- 调整 Git 忽略规则，放行 `EN-HCNetSDKV6.1.9.4_build20220412_win64/lib/` 及其子文件。
+- 更新实施文档，说明服务器拉取代码后同时具备可执行 Jar 和 SDK 运行库，无需手动拷贝 SDK。
+
+### Testing
+- 已确认 SDK 最大单文件小于 GitHub 单文件 100MB 限制。
+- 本轮未重新运行设备联调；改动范围是提交运行依赖文件和说明文档。
+
+### Notes
+- `.gitignore`：将海康 SDK 忽略规则改为只放行 `EN-HCNetSDKV6.1.9.4_build20220412_win64/lib/`。
+- `EN-HCNetSDKV6.1.9.4_build20220412_win64/lib/`：提交真实设备启动所需的海康 Windows SDK 运行库。
+- `docs/thermal-fire-detection-plan.md`：补充服务器无需手动拷贝 SDK 的说明。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：可执行本轮提交的 `git revert` 回滚 SDK 运行库提交；或删除仓库中的 `EN-HCNetSDKV6.1.9.4_build20220412_win64/lib/` 并恢复 `.gitignore` 为完整忽略 SDK 目录。
