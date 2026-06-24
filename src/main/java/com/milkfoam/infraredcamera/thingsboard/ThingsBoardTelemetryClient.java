@@ -1,6 +1,7 @@
 package com.milkfoam.infraredcamera.thingsboard;
 
 import com.milkfoam.infraredcamera.fire.FireDetectionEvent;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -27,15 +28,21 @@ public final class ThingsBoardTelemetryClient implements AutoCloseable {
     });
     this.httpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(3))
-        .executor(executor)
         .build();
+    if (config.enabled()) {
+      System.out.println("ThingsBoard telemetry enabled: " + config.telemetryUri());
+    } else {
+      System.out.println("ThingsBoard telemetry disabled: missing --thingsboard-host or --thingsboard-token");
+    }
   }
 
   public void sendFireDetected(FireDetectionEvent event) {
     Objects.requireNonNull(event, "event");
     if (!config.enabled()) {
+      System.out.println("ThingsBoard telemetry skipped: telemetry is disabled, eventId=" + event.eventId());
       return;
     }
+    System.out.println("ThingsBoard telemetry queued: eventId=" + event.eventId());
     executor.execute(() -> postTelemetry(event));
   }
 
@@ -66,18 +73,27 @@ public final class ThingsBoardTelemetryClient implements AutoCloseable {
 
   private void postTelemetry(FireDetectionEvent event) {
     String body = telemetryJson(event);
-    HttpRequest request = HttpRequest.newBuilder(config.telemetryUri())
+    URI uri = config.telemetryUri();
+    HttpRequest request = HttpRequest.newBuilder(uri)
         .timeout(Duration.ofSeconds(5))
         .header("Content-Type", "application/json; charset=utf-8")
         .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
         .build();
+    System.out.println("ThingsBoard telemetry posting: eventId=" + event.eventId() + ", url=" + uri);
+    System.out.println("ThingsBoard telemetry payload: " + body);
     try {
       HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+      System.out.println("ThingsBoard telemetry response: eventId=" + event.eventId()
+          + ", status=" + response.statusCode()
+          + ", body=" + response.body());
       if (response.statusCode() < 200 || response.statusCode() >= 300) {
-        System.out.println("ThingsBoard 上报失败，status=" + response.statusCode() + ", body=" + response.body());
+        System.out.println("ThingsBoard telemetry failed: non-2xx status, eventId=" + event.eventId());
       }
     } catch (Exception ex) {
-      System.out.println("ThingsBoard 上报异常：" + ex.getMessage());
+      System.out.println("ThingsBoard telemetry exception: eventId=" + event.eventId()
+          + ", type=" + ex.getClass().getName()
+          + ", message=" + ex.getMessage());
+      ex.printStackTrace(System.out);
     }
   }
 

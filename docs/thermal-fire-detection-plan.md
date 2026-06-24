@@ -223,7 +223,7 @@ curl --max-time 3 -N "http://127.0.0.1:8765/api/fire-events/stream"
 start-hikvision-fire-detection.bat
 ```
 
-脚本已按 `HM-TCQ203-S` 当前现场参数预设：摄像头 IP `192.168.1.64`、SDK 端口 `8000`、热成像通道 `2`、账号 `admin`，启动时会提示输入密码，避免把密码写入文件。
+脚本已按 `HM-TCQ203-S` 当前现场参数预设：摄像头 IP `192.168.1.64`、SDK 端口 `8000`、热成像通道 `2`、账号 `admin` 和 ThingsBoard 地址 `192.168.1.78:8080`。启动时会提示输入摄像头密码和 ThingsBoard 设备访问令牌，避免把敏感信息写入文件。
 
 命令行示例：
 
@@ -247,6 +247,7 @@ java -jar target/infrared-camera-1.0.0.jar \
 - 页面主体只展示 `/api/live-frame` 返回的热成像抓图，红色像素标注会按火源高亮轮廓叠加在真实画面上。
 - 当前抓图刷新为秒级刷新，不是 25fps 视频流；如需低延迟视频，后续需要单独接 RTSP 转 HLS/WebRTC。
 - 收到火点事件后会先更新本地页面，再异步向 ThingsBoard 上报遥测；未配置 `--thingsboard-host` 或 `--thingsboard-token` 时不上报云端。
+- 控制台和 `start-hikvision-fire-detection.log` 会输出 ThingsBoard 上传开关、目标地址、事件 ID、请求 JSON、响应状态码、响应体和异常栈，便于排查为什么未上传成功。
 - ThingsBoard 上报地址格式：`http://<thingsboard-host>/api/v1/<thingsboard-token>/telemetry`。
 - 上报基础字段包含 `warning_flag=1`、`warning_status=1`，同时附带摄像头、通道、设备 IP、事件 ID、最高温、距离、火点框坐标、最高温点和事件时间。
 - `--sdk-lib` 可传绝对路径，也可省略并让 JNA 从系统库路径查找。

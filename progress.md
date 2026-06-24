@@ -319,3 +319,25 @@
 - `src/main/resources/web/style.css`：删除方框、温度标签和最高温点样式，新增全屏像素标注画布样式。
 - `docs/thermal-fire-detection-plan.md`：更新前端实时标注说明和验收清单，明确不再绘制整块矩形框。
 - 回滚方式：本目录不是 Git 仓库；如需回滚本轮改动，可恢复 `index.html` 中的 `fireBox`、`temperatureTag`、`hotPoint` 元素，恢复 `app.js` 中按矩形坐标设置 DOM 样式的逻辑，并恢复 `style.css` 中 `.fire-box`、`.temperature-tag` 和 `.hot-point` 样式。
+
+## 2026-06-24 - Task: 建立 Git 仓库并增强 ThingsBoard 上传日志
+
+### What was done
+- 在项目目录初始化 Git 仓库，并完成首次代码提交。
+- 新增 `.gitignore`，排除构建产物、运行日志、海康 SDK 二进制包和本地 ThingsBoard 调试文件，避免敏感信息和大文件进入仓库。
+- 将真实设备启动脚本中的 ThingsBoard 设备令牌改为运行时输入或环境变量注入，不再把令牌写死到脚本中。
+- 增强 ThingsBoard 上传控制台日志，输出上传开关、目标地址、事件 ID、请求 JSON、响应状态码、响应体和异常栈。
+- 调整 ThingsBoard HTTP 客户端执行器使用方式，避免上传任务与 HttpClient 共用单线程执行器导致排查困难。
+- 同步更新实施文档，说明启动脚本的令牌输入方式和 ThingsBoard 上传日志内容。
+
+### Testing
+- 已执行 `mvn test && mvn package`，结果通过：测试 27 个全部通过，并成功重新生成 `target/infrared-camera-1.0.0.jar`。
+- 已完成首次 Git 提交：`63c3fe3 Initial infrared camera fire detection app`。
+
+### Notes
+- `.gitignore`：新增 Git 忽略规则，排除 `target/`、日志、SDK 二进制目录和本地 token 调试文件。
+- `start-hikvision-fire-detection.bat`：ThingsBoard 令牌改为运行时输入或环境变量注入，并对 ThingsBoard 参数加引号。
+- `src/main/java/com/milkfoam/infraredcamera/thingsboard/ThingsBoardTelemetryClient.java`：新增上传调试日志和异常栈输出，并调整 HttpClient 执行器配置。
+- `docs/thermal-fire-detection-plan.md`：补充 ThingsBoard 令牌输入和上传日志说明。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：可执行 `git revert 63c3fe3` 回滚首次提交；ThingsBoard 日志增强改动如需回滚，可恢复上述文件到 `63c3fe3` 对应版本后重新打包。
