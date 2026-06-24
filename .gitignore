@@ -1,0 +1,19 @@
+# Build output
+target/
+
+# Runtime logs
+*.log
+start-hikvision-fire-detection.log
+
+# Local SDK binaries and vendor packages
+EN-HCNetSDKV6.1.9.4_build20220412_win64/
+
+# Local debug files that may contain tokens
+thingsboard上报.txt
+
+# IDE and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

@@ -1,0 +1,61 @@
+package com.milkfoam.infraredcamera.thingsboard;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.milkfoam.infraredcamera.fire.FireDetectionEvent;
+import com.milkfoam.infraredcamera.fire.NormalizedPoint;
+import com.milkfoam.infraredcamera.fire.NormalizedRect;
+import java.net.URI;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import org.junit.jupiter.api.Test;
+
+class ThingsBoardTelemetryClientTest {
+
+  @Test
+  void buildsTelemetryUrlFromHostAndToken() {
+    ThingsBoardConfig config = new ThingsBoardConfig("192.168.1.78:8080", "token-123");
+
+    assertTrue(config.enabled());
+    assertEquals(URI.create("http://192.168.1.78:8080/api/v1/token-123/telemetry"), config.telemetryUri());
+  }
+
+  @Test
+  void disabledWhenHostOrTokenIsBlank() {
+    assertFalse(new ThingsBoardConfig("", "token").enabled());
+    assertFalse(new ThingsBoardConfig("192.168.1.78:8080", " ").enabled());
+  }
+
+  @Test
+  void telemetryJsonContainsWarningFlagAndFireFields() {
+    FireDetectionEvent event = new FireDetectionEvent(
+        "fire-001",
+        "hm-tcq203-s",
+        2,
+        "192.168.1.64",
+        "fire_detection",
+        OffsetDateTime.of(2026, 6, 23, 9, 30, 0, 0, ZoneOffset.ofHours(8)),
+        86.5,
+        12.25,
+        new NormalizedRect(0.1, 0.2, 0.3, 0.4),
+        new NormalizedPoint(0.25, 0.35),
+        "/api/fire-events/fire-001/snapshot",
+        "COMM_FIREDETECTION_ALARM");
+
+    String json = ThingsBoardTelemetryClient.telemetryJson(event);
+
+    assertTrue(json.contains("\"warning_flag\":\"1\""));
+    assertTrue(json.contains("\"warning_status\":\"1\""));
+    assertTrue(json.contains("\"camera_id\":\"hm-tcq203-s\""));
+    assertTrue(json.contains("\"channel_id\":2"));
+    assertTrue(json.contains("\"device_ip\":\"192.168.1.64\""));
+    assertTrue(json.contains("\"event_id\":\"fire-001\""));
+    assertTrue(json.contains("\"max_temperature\":86.500000"));
+    assertTrue(json.contains("\"target_distance\":12.250000"));
+    assertTrue(json.contains("\"fire_x\":0.100000"));
+    assertTrue(json.contains("\"highest_y\":0.350000"));
+    assertTrue(json.contains("\"event_time\":\"2026-06-23T09:30:00+08:00\""));
+  }
+}
