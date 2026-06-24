@@ -1,5 +1,6 @@
 # Build output
-target/
+target/*
+!target/infrared-camera-1.0.0.jar
 
 # Runtime logs
 *.log

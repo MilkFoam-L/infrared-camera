@@ -341,3 +341,20 @@
 - `docs/thermal-fire-detection-plan.md`：补充 ThingsBoard 令牌输入和上传日志说明。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：可执行 `git revert 63c3fe3` 回滚首次提交；ThingsBoard 日志增强改动如需回滚，可恢复上述文件到 `63c3fe3` 对应版本后重新打包。
+
+## 2026-06-24 - Task: 提交可执行 Jar 供服务器直接运行
+
+### What was done
+- 重新执行 Maven 打包，生成最新 `target/infrared-camera-1.0.0.jar`。
+- 调整 Git 忽略规则，继续忽略 `target/` 内临时构建文件，但允许提交服务器启动脚本需要的可执行 Jar。
+- 更新实施文档，说明 Windows 服务器拉取代码后可直接使用已提交 Jar 运行真实设备脚本。
+
+### Testing
+- 已执行 `mvn package`，结果通过：测试 27 个全部通过，并成功生成 `target/infrared-camera-1.0.0.jar`。
+
+### Notes
+- `.gitignore`：将 `target/` 忽略规则改为只放行 `target/infrared-camera-1.0.0.jar`。
+- `target/infrared-camera-1.0.0.jar`：提交可执行构建产物，供服务器直接运行。
+- `docs/thermal-fire-detection-plan.md`：补充服务器无需 Maven 打包即可运行脚本的说明。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：可执行本轮提交的 `git revert` 回滚 Jar 提交；或删除仓库中的 `target/infrared-camera-1.0.0.jar` 并恢复 `.gitignore` 为完整忽略 `target/`。
