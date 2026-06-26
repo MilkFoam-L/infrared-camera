@@ -4,7 +4,7 @@ import requests
 
 
 thingsboard_host = "192.168.1.78:8080"
-device_token = "PLEASE_SET_THINGSBOARD_TOKEN"
+device_token = "Re7fUx8Zrr6tl69BARLZ"
 
 if not device_token or device_token == "PLEASE_SET_THINGSBOARD_TOKEN":
     raise SystemExit("请先打开 thingsboard上报.txt，把 device_token 改成 ThingsBoard 设备访问令牌")
