@@ -416,3 +416,22 @@
 - `docs/thermal-fire-detection-plan.md`：补充实时控制台日志说明。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：可执行本轮提交的 `git revert` 回滚；或恢复 `App.java`、`start-hikvision-fire-detection.bat`、`target/infrared-camera-1.0.0.jar` 和文档到上一提交版本。
+
+## 2026-06-26 - Task: 改为文件内固定配置摄像头和 ThingsBoard 密钥
+
+### What was done
+- 将真实设备启动脚本改为完全使用文件内固定变量，不再读取电脑环境变量，也不再启动时询问密码或 ThingsBoard 令牌。
+- 在脚本顶部增加 `CAMERA_PASSWORD` 固定配置项，并将 `THINGSBOARD_TOKEN` 改为文件内占位配置，方便现场直接修改。
+- 调整 `thingsboard上报.txt`，改为在文件顶部直接配置 ThingsBoard 地址和设备访问令牌，不再读取环境变量或命令行参数。
+- 更新实施文档，说明当前部署方式为脚本内固定变量配置。
+
+### Testing
+- 已执行 `python -m py_compile "thingsboard上报.txt"`，结果通过，调试脚本语法正确。
+- 本轮未重新打包 Java，原因是只修改启动脚本、Python 调试脚本和文档，未修改 Java 代码。
+
+### Notes
+- `start-hikvision-fire-detection.bat`：改为文件内固定配置 `CAMERA_PASSWORD` 和 `THINGSBOARD_TOKEN`，并保留未配置占位值时的启动前校验。
+- `thingsboard上报.txt`：改为文件顶部固定配置 ThingsBoard 地址和设备访问令牌。
+- `docs/thermal-fire-detection-plan.md`：更新部署配置说明。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：可执行本轮提交的 `git revert` 回滚；或恢复启动脚本和调试脚本为环境变量/运行时输入版本。

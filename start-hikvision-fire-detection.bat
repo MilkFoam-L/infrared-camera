@@ -12,10 +12,11 @@ set "CAMERA_ID=hm-tcq203-s"
 set "CAMERA_HOST=192.168.1.64"
 set "CAMERA_PORT=8000"
 set "CAMERA_USER=admin"
+set "CAMERA_PASSWORD=PLEASE_SET_CAMERA_PASSWORD"
 set "THERMAL_CHANNEL=2"
 set "HTTP_PORT=8765"
 set "THINGSBOARD_HOST=192.168.1.78:8080"
-set "THINGSBOARD_TOKEN=%THINGSBOARD_TOKEN%"
+set "THINGSBOARD_TOKEN=PLEASE_SET_THINGSBOARD_TOKEN"
 
 echo.
 echo ========================================
@@ -44,20 +45,23 @@ if errorlevel 1 (
 set "PATH=%SDK_DIR%;%SDK_DIR%\HCNetSDKCom;%PATH%"
 
 if "%CAMERA_PASSWORD%"=="" (
-  set /p "CAMERA_PASSWORD=Input camera password: "
+  echo [ERROR] Camera password is empty. Edit CAMERA_PASSWORD in this script.
+  goto END
 )
 
-if "%CAMERA_PASSWORD%"=="" (
-  echo [ERROR] Camera password is empty.
+if "%CAMERA_PASSWORD%"=="PLEASE_SET_CAMERA_PASSWORD" (
+  echo [ERROR] Camera password is not configured. Edit CAMERA_PASSWORD in this script.
   goto END
 )
 
 if "%THINGSBOARD_TOKEN%"=="" (
-  set /p "THINGSBOARD_TOKEN=Input ThingsBoard device token: "
+  echo [ERROR] ThingsBoard token is empty. Edit THINGSBOARD_TOKEN in this script.
+  goto END
 )
 
-if "%THINGSBOARD_TOKEN%"=="" (
-  echo [WARN] ThingsBoard token is empty. Telemetry upload will be disabled.
+if "%THINGSBOARD_TOKEN%"=="PLEASE_SET_THINGSBOARD_TOKEN" (
+  echo [ERROR] ThingsBoard token is not configured. Edit THINGSBOARD_TOKEN in this script.
+  goto END
 )
 
 echo Camera host: %CAMERA_HOST%
