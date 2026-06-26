@@ -81,8 +81,8 @@ class ThermalImageFireDetectorTest {
   void ignoresThinVerticalBrightArtifact() {
     BufferedImage image = new BufferedImage(320, 240, BufferedImage.TYPE_INT_RGB);
     fill(image, new Color(35, 35, 35));
-    for (int y = 140; y < 170; y++) {
-      for (int x = 239; x < 241; x++) {
+    for (int y = 140; y < 172; y++) {
+      for (int x = 238; x < 243; x++) {
         image.setRGB(x, y, Color.WHITE.getRGB());
       }
     }

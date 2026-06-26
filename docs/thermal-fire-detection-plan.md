@@ -251,7 +251,7 @@ java -jar target/infrared-camera-1.0.0.jar \
 - 当前抓图刷新为秒级刷新，不是 25fps 视频流；如需低延迟视频，后续需要单独接 RTSP 转 HLS/WebRTC。
 - 真实设备模式不再依赖海康 SDK 火点报警事件触发上报；后端会在每次抓取热成像 JPEG 后自行分析高亮热源像素区域，并排除顶部时间/星期、右下角 Camera 等 OSD 叠字区域，同时过滤显示器这类大块规则矩形亮屏和极细竖线高亮伪影；只有确认的火焰高亮区域达到 `FIRE_BRIGHTNESS_THRESHOLD` 配置阈值后，才生成 `LOCAL_THERMAL_FRAME_DETECTION` 事件。
 - 收到本地热成像画面检测事件后会先更新本地页面，再异步向 ThingsBoard 上报遥测；未配置 `--thingsboard-host` 或 `--thingsboard-token` 时不上报云端。
-- 启动窗口会实时显示 Java 输出；程序每 5 秒输出一条中文火点检测状态日志，画面检测到火源时输出中文火点事件明细。
+- 启动窗口会实时显示 Java 输出；程序每 5 秒输出一条中文火点检测状态日志，画面出现高亮候选区域时会输出图片尺寸、阈值、像素范围、像素宽高、宽高占比、竖向宽高比、填充率和过滤原因；画面检测到火源时输出中文火点事件明细。
 - 控制台会输出中文 ThingsBoard 上传开关、目标地址、事件 ID、请求 JSON、响应状态码、响应体和异常栈，便于排查为什么未上传成功。
 - `thingsboard上报.txt` 是手工验证 ThingsBoard 链路的 Python 调试脚本，ThingsBoard 地址和设备访问令牌直接在文件顶部变量中配置，不读取电脑环境变量。
 - ThingsBoard 上报地址格式：`http://<thingsboard-host>/api/v1/<thingsboard-token>/telemetry`。

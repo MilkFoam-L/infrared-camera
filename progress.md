@@ -613,3 +613,25 @@
 - `target/infrared-camera-1.0.0.jar`：重新打包后的服务器运行包。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：使用 `git revert <本次提交>` 回滚本轮细竖线误报过滤改动；或恢复上述文件到本轮修改前版本后重新执行 `mvn test && mvn package`。
+
+## 2026-06-27 - Task: 增加高亮像素诊断日志并放宽竖线过滤
+
+### What was done
+- 增加高亮候选区域诊断日志，输出图片尺寸、阈值、候选像素范围、像素宽高、宽高占比、竖向宽高比、填充率和过滤原因。
+- 根据测试复现结果确认原因：5 像素宽竖线的宽占比为 `0.015625`，旧过滤阈值 `0.015` 略窄导致没有命中。
+- 将极细竖线过滤改为同时按像素宽度和图像宽占比判断，并把宽占比上限放宽到 `0.02`，覆盖当前现场细竖线伪影。
+- 更新实施文档，说明控制台会输出高亮候选区域诊断信息。
+- 重新打包可执行 Jar，方便现场拉取后直接验证。
+
+### Testing
+- 首次执行 `mvn test` 失败，原因是复现的 5 像素竖线宽占比 `0.015625` 略高于旧阈值 `0.015`，测试证明旧过滤条件确实没有命中。
+- 调整阈值后复测 `mvn test` 通过：33 个测试全部通过，0 失败，0 错误，0 跳过。
+- 已执行 `mvn package`，结果通过：33 个测试全部通过，并成功重新生成 `target/infrared-camera-1.0.0.jar`。
+
+### Notes
+- `src/main/java/com/milkfoam/infraredcamera/fire/ThermalImageFireDetector.java`：新增高亮候选区域诊断日志，并将竖线伪影过滤改为像素宽度加宽占比双条件。
+- `src/test/java/com/milkfoam/infraredcamera/fire/ThermalImageFireDetectorTest.java`：将细竖线测试扩展为 5 像素宽，覆盖现场未命中的伪影形态。
+- `docs/thermal-fire-detection-plan.md`：补充高亮候选区域诊断日志说明。
+- `target/infrared-camera-1.0.0.jar`：重新打包后的服务器运行包。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：使用 `git revert <本次提交>` 回滚本轮诊断日志和竖线过滤阈值改动；或恢复上述文件到本轮修改前版本后重新执行 `mvn test && mvn package`。

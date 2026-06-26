@@ -4,6 +4,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayDeque;
+import java.util.Locale;
 import java.util.Optional;
 import javax.imageio.ImageIO;
 
@@ -20,9 +21,10 @@ public final class ThermalImageFireDetector {
   private static final double MIN_DISPLAY_LIKE_ASPECT_RATIO = 1.6;
   private static final double MAX_DISPLAY_LIKE_ASPECT_RATIO = 4.0;
   private static final double MIN_DISPLAY_LIKE_FILL_RATIO = 0.78;
-  private static final int MAX_THIN_VERTICAL_ARTIFACT_WIDTH_PIXELS = 3;
+  private static final int MAX_THIN_VERTICAL_ARTIFACT_WIDTH_PIXELS = 6;
+  private static final double MAX_THIN_VERTICAL_ARTIFACT_WIDTH_RATIO = 0.02;
   private static final double MIN_THIN_VERTICAL_ARTIFACT_HEIGHT_RATIO = 0.08;
-  private static final double MIN_THIN_VERTICAL_ARTIFACT_ASPECT_RATIO = 8.0;
+  private static final double MIN_THIN_VERTICAL_ARTIFACT_ASPECT_RATIO = 5.5;
 
   private ThermalImageFireDetector() {
   }
@@ -103,17 +105,26 @@ public final class ThermalImageFireDetector {
         }
 
         Component component = floodFill(width, height, luminance, visited, queue, start, threshold);
-        if (component.pixelCount >= MIN_COMPONENT_PIXELS && (best == null || component.score() > best.score())) {
-          best = component;
+        if (component.pixelCount >= MIN_COMPONENT_PIXELS) {
+          logCandidate("候选高亮区域", component, width, height, threshold, null);
+          if (best == null || component.score() > best.score()) {
+            best = component;
+          }
         }
       }
     }
 
-    if (best == null
-        || isDisplayLikeRegion(best, width, height)
-        || isThinVerticalArtifact(best, height)) {
+    if (best == null) {
       return Optional.empty();
     }
+
+    String rejectionReason = rejectionReason(best, width, height);
+    if (rejectionReason != null) {
+      logCandidate("已过滤高亮区域", best, width, height, threshold, rejectionReason);
+      return Optional.empty();
+    }
+
+    logCandidate("确认火点区域", best, width, height, threshold, null);
 
     NormalizedRect rect = new NormalizedRect(
         best.minX / (double) width,
@@ -122,6 +133,45 @@ public final class ThermalImageFireDetector {
         Math.max(1, best.maxY - best.minY + 1) / (double) height);
     NormalizedPoint point = new NormalizedPoint(best.maxXInComponent / (double) width, best.maxYInComponent / (double) height);
     return Optional.of(new DetectedFire(rect, point, best.maxBrightness, best.pixelCount, threshold));
+  }
+
+  private static String rejectionReason(Component component, int imageWidth, int imageHeight) {
+    if (isDisplayLikeRegion(component, imageWidth, imageHeight)) {
+      return "显示器类规则矩形高亮";
+    }
+    if (isThinVerticalArtifact(component, imageWidth, imageHeight)) {
+      return "极细竖线高亮伪影";
+    }
+    return null;
+  }
+
+  private static void logCandidate(
+      String prefix,
+      Component component,
+      int imageWidth,
+      int imageHeight,
+      int threshold,
+      String rejectionReason) {
+    int componentWidth = component.maxX - component.minX + 1;
+    int componentHeight = component.maxY - component.minY + 1;
+    double widthRatio = componentWidth / (double) imageWidth;
+    double heightRatio = componentHeight / (double) imageHeight;
+    double verticalAspectRatio = componentHeight / (double) componentWidth;
+    double fillRatio = component.pixelCount / (double) (componentWidth * componentHeight);
+    String reason = rejectionReason == null ? "" : "，过滤原因=" + rejectionReason;
+    System.out.println(prefix + "：图片=" + imageWidth + "x" + imageHeight
+        + "，阈值=" + threshold
+        + "，像素数=" + component.pixelCount
+        + "，亮度最大值=" + component.maxBrightness
+        + "，像素范围=x=" + component.minX + ".." + component.maxX
+        + "，y=" + component.minY + ".." + component.maxY
+        + "，像素宽=" + componentWidth
+        + "，像素高=" + componentHeight
+        + "，宽占比=" + String.format(Locale.ROOT, "%.6f", widthRatio)
+        + "，高占比=" + String.format(Locale.ROOT, "%.6f", heightRatio)
+        + "，竖向宽高比=" + String.format(Locale.ROOT, "%.2f", verticalAspectRatio)
+        + "，填充率=" + String.format(Locale.ROOT, "%.3f", fillRatio)
+        + reason);
   }
 
   private static boolean isDisplayLikeRegion(Component component, int imageWidth, int imageHeight) {
@@ -138,12 +188,14 @@ public final class ThermalImageFireDetector {
         && fillRatio >= MIN_DISPLAY_LIKE_FILL_RATIO;
   }
 
-  private static boolean isThinVerticalArtifact(Component component, int imageHeight) {
+  private static boolean isThinVerticalArtifact(Component component, int imageWidth, int imageHeight) {
     int componentWidth = component.maxX - component.minX + 1;
     int componentHeight = component.maxY - component.minY + 1;
+    double widthRatio = componentWidth / (double) imageWidth;
     double heightRatio = componentHeight / (double) imageHeight;
     double aspectRatio = componentHeight / (double) componentWidth;
     return componentWidth <= MAX_THIN_VERTICAL_ARTIFACT_WIDTH_PIXELS
+        && widthRatio <= MAX_THIN_VERTICAL_ARTIFACT_WIDTH_RATIO
         && heightRatio >= MIN_THIN_VERTICAL_ARTIFACT_HEIGHT_RATIO
         && aspectRatio >= MIN_THIN_VERTICAL_ARTIFACT_ASPECT_RATIO;
   }
