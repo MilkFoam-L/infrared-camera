@@ -223,7 +223,7 @@ curl --max-time 3 -N "http://127.0.0.1:8765/api/fire-events/stream"
 start-hikvision-fire-detection.bat
 ```
 
-脚本已按 `HM-TCQ203-S` 当前现场参数预设：摄像头 IP `192.168.1.64`、SDK 端口 `8000`、热成像通道 `2`、账号 `admin` 和 ThingsBoard 地址 `192.168.1.78:8080`。摄像头密码和 ThingsBoard 设备访问令牌直接在 `start-hikvision-fire-detection.bat` 顶部变量中配置，不再读取电脑环境变量，也不再启动时询问。
+脚本已按 `HM-TCQ203-S` 当前现场参数预设：摄像头 IP `192.168.1.64`、SDK 端口 `8000`、热成像通道 `2`、账号 `admin`、ThingsBoard 地址 `192.168.1.78:8080` 和 ThingsBoard 令牌。摄像头密码需要在 `start-hikvision-fire-detection.bat` 顶部变量 `CAMERA_PASSWORD` 中配置；脚本不再读取电脑环境变量，也不再启动时询问。
 
 命令行示例：
 

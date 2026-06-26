@@ -8,6 +8,7 @@ set "SDK_DIR=%APP_DIR%EN-HCNetSDKV6.1.9.4_build20220412_win64\lib"
 set "SDK_DLL=%SDK_DIR%\HCNetSDK.dll"
 set "LOG_FILE=%APP_DIR%start-hikvision-fire-detection.log"
 
+rem ===== Edit deployment values below before running =====
 set "CAMERA_ID=hm-tcq203-s"
 set "CAMERA_HOST=192.168.1.64"
 set "CAMERA_PORT=8000"
@@ -16,13 +17,23 @@ set "CAMERA_PASSWORD=PLEASE_SET_CAMERA_PASSWORD"
 set "THERMAL_CHANNEL=2"
 set "HTTP_PORT=8765"
 set "THINGSBOARD_HOST=192.168.1.78:8080"
-set "THINGSBOARD_TOKEN=PLEASE_SET_THINGSBOARD_TOKEN"
+set "THINGSBOARD_TOKEN=Re7fUx8Zrr6tl69BARLZ"
+rem ===== Edit deployment values above before running =====
 
 echo.
 echo ========================================
 echo   infrared-camera hikvision launcher
 echo ========================================
 echo.
+
+echo ===== %DATE% %TIME% start ===== > "%LOG_FILE%"
+echo APP_DIR=%APP_DIR% >> "%LOG_FILE%"
+echo JAR=%JAR% >> "%LOG_FILE%"
+echo SDK_DIR=%SDK_DIR% >> "%LOG_FILE%"
+echo SDK_DLL=%SDK_DLL% >> "%LOG_FILE%"
+echo CAMERA_HOST=%CAMERA_HOST% >> "%LOG_FILE%"
+echo THERMAL_CHANNEL=%THERMAL_CHANNEL% >> "%LOG_FILE%"
+echo THINGSBOARD_HOST=%THINGSBOARD_HOST% >> "%LOG_FILE%"
 
 if not exist "%JAR%" (
   echo [ERROR] Jar not found: %JAR%
@@ -77,14 +88,7 @@ echo Java logs will be displayed in this console in real time.
 echo Open browser: http://127.0.0.1:%HTTP_PORT%/
 echo.
 
-echo ===== %DATE% %TIME% start ===== > "%LOG_FILE%"
-echo APP_DIR=%APP_DIR% >> "%LOG_FILE%"
-echo JAR=%JAR% >> "%LOG_FILE%"
-echo SDK_DIR=%SDK_DIR% >> "%LOG_FILE%"
-echo SDK_DLL=%SDK_DLL% >> "%LOG_FILE%"
-echo CAMERA_HOST=%CAMERA_HOST% >> "%LOG_FILE%"
-echo THERMAL_CHANNEL=%THERMAL_CHANNEL% >> "%LOG_FILE%"
-echo THINGSBOARD_HOST=%THINGSBOARD_HOST% >> "%LOG_FILE%"
+echo ===== %DATE% %TIME% java start ===== >> "%LOG_FILE%"
 java -version >> "%LOG_FILE%" 2>&1
 
 call java -jar "%JAR%" --mode=hikvision --http-port=%HTTP_PORT% --camera-id=%CAMERA_ID% --host=%CAMERA_HOST% --port=%CAMERA_PORT% --username=%CAMERA_USER% --password="%CAMERA_PASSWORD%" --channel=%THERMAL_CHANNEL% --sdk-lib="%SDK_DLL%" --thingsboard-host="%THINGSBOARD_HOST%" --thingsboard-token="%THINGSBOARD_TOKEN%"
@@ -110,6 +114,7 @@ goto HOLD
 :END
 echo.
 echo Startup failed before Java process.
+echo Startup failed before Java process. >> "%LOG_FILE%"
 echo Log file: %LOG_FILE%
 goto SHOW_LOG
 

@@ -435,3 +435,22 @@
 - `docs/thermal-fire-detection-plan.md`：更新部署配置说明。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：可执行本轮提交的 `git revert` 回滚；或恢复启动脚本和调试脚本为环境变量/运行时输入版本。
+
+## 2026-06-26 - Task: 修复启动前失败时旧日志误导问题
+
+### What was done
+- 将 ThingsBoard 令牌预置到真实设备启动脚本中，只保留摄像头密码需要现场填写。
+- 在启动脚本顶部明确标出部署配置区域，提示运行前编辑 `CAMERA_PASSWORD`。
+- 调整日志初始化时机，脚本启动后立即刷新 `start-hikvision-fire-detection.log`，避免启动前失败时打印上一次成功运行的旧日志。
+- 启动前失败时会在当前日志中写入失败提示，便于区分当前失败和历史日志。
+- 更新实施文档，说明当前只需要配置摄像头密码。
+
+### Testing
+- 已执行脚本静态检查，确认 `CAMERA_PASSWORD` 未配置时会在启动 Java 前停止，并刷新当前日志文件。
+- 本轮未重新打包 Java，原因是只修改启动脚本和文档，未修改 Java 代码。
+
+### Notes
+- `start-hikvision-fire-detection.bat`：预置 ThingsBoard 令牌，保留摄像头密码占位校验，并修复旧日志误导问题。
+- `docs/thermal-fire-detection-plan.md`：更新真实设备脚本配置说明。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：可执行本轮提交的 `git revert` 回滚；或恢复启动脚本为上一提交版本。
