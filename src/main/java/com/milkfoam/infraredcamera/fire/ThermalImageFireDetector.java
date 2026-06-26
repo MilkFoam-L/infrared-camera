@@ -20,6 +20,9 @@ public final class ThermalImageFireDetector {
   private static final double MIN_DISPLAY_LIKE_ASPECT_RATIO = 1.6;
   private static final double MAX_DISPLAY_LIKE_ASPECT_RATIO = 4.0;
   private static final double MIN_DISPLAY_LIKE_FILL_RATIO = 0.78;
+  private static final int MAX_THIN_VERTICAL_ARTIFACT_WIDTH_PIXELS = 3;
+  private static final double MIN_THIN_VERTICAL_ARTIFACT_HEIGHT_RATIO = 0.08;
+  private static final double MIN_THIN_VERTICAL_ARTIFACT_ASPECT_RATIO = 8.0;
 
   private ThermalImageFireDetector() {
   }
@@ -106,7 +109,9 @@ public final class ThermalImageFireDetector {
       }
     }
 
-    if (best == null || isDisplayLikeRegion(best, width, height)) {
+    if (best == null
+        || isDisplayLikeRegion(best, width, height)
+        || isThinVerticalArtifact(best, height)) {
       return Optional.empty();
     }
 
@@ -131,6 +136,16 @@ public final class ThermalImageFireDetector {
         && aspectRatio >= MIN_DISPLAY_LIKE_ASPECT_RATIO
         && aspectRatio <= MAX_DISPLAY_LIKE_ASPECT_RATIO
         && fillRatio >= MIN_DISPLAY_LIKE_FILL_RATIO;
+  }
+
+  private static boolean isThinVerticalArtifact(Component component, int imageHeight) {
+    int componentWidth = component.maxX - component.minX + 1;
+    int componentHeight = component.maxY - component.minY + 1;
+    double heightRatio = componentHeight / (double) imageHeight;
+    double aspectRatio = componentHeight / (double) componentWidth;
+    return componentWidth <= MAX_THIN_VERTICAL_ARTIFACT_WIDTH_PIXELS
+        && heightRatio >= MIN_THIN_VERTICAL_ARTIFACT_HEIGHT_RATIO
+        && aspectRatio >= MIN_THIN_VERTICAL_ARTIFACT_ASPECT_RATIO;
   }
 
   private static boolean isIgnoredOsdArea(int x, int y, int width, int height) {

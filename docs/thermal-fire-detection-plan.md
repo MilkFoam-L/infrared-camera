@@ -249,7 +249,7 @@ java -jar target/infrared-camera-1.0.0.jar \
 - 后端每次检测会把实际用于报警的 `fireBrightnessThreshold` 写入事件，前端红色像素绘制直接使用该阈值，不再使用另一套前端阈值，确保有红色像素时就是已报警/已上报的同源火点事件。
 - 页面主体只展示 `/api/live-frame` 返回的热成像抓图，红色像素标注会按火源高亮轮廓叠加在真实画面上。
 - 当前抓图刷新为秒级刷新，不是 25fps 视频流；如需低延迟视频，后续需要单独接 RTSP 转 HLS/WebRTC。
-- 真实设备模式不再依赖海康 SDK 火点报警事件触发上报；后端会在每次抓取热成像 JPEG 后自行分析高亮热源像素区域，并排除顶部时间/星期、右下角 Camera 等 OSD 叠字区域，同时过滤显示器这类大块规则矩形亮屏；只有确认的火焰高亮区域达到 `FIRE_BRIGHTNESS_THRESHOLD` 配置阈值后，才生成 `LOCAL_THERMAL_FRAME_DETECTION` 事件。
+- 真实设备模式不再依赖海康 SDK 火点报警事件触发上报；后端会在每次抓取热成像 JPEG 后自行分析高亮热源像素区域，并排除顶部时间/星期、右下角 Camera 等 OSD 叠字区域，同时过滤显示器这类大块规则矩形亮屏和极细竖线高亮伪影；只有确认的火焰高亮区域达到 `FIRE_BRIGHTNESS_THRESHOLD` 配置阈值后，才生成 `LOCAL_THERMAL_FRAME_DETECTION` 事件。
 - 收到本地热成像画面检测事件后会先更新本地页面，再异步向 ThingsBoard 上报遥测；未配置 `--thingsboard-host` 或 `--thingsboard-token` 时不上报云端。
 - 启动窗口会实时显示 Java 输出；程序每 5 秒输出一条中文火点检测状态日志，画面检测到火源时输出中文火点事件明细。
 - 控制台会输出中文 ThingsBoard 上传开关、目标地址、事件 ID、请求 JSON、响应状态码、响应体和异常栈，便于排查为什么未上传成功。

@@ -592,3 +592,24 @@
 - `target/infrared-camera-1.0.0.jar`：重新打包后的服务器运行包。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：使用 `git revert <本次提交>` 回滚本轮网页按钮改动；或恢复上述文件到本轮修改前版本后重新执行 `mvn package`。
+
+## 2026-06-26 - Task: 过滤热成像细竖线误报
+
+### What was done
+- 根据现场日志定位误报形态：火点宽度只有约 0.0063 到 0.0094，折算约 2 到 3 像素，但高度超过 0.10，属于极细竖线高亮伪影，不是实际火源。
+- 后端热成像火点检测新增细竖线伪影过滤，宽度极窄且高度较长的高亮区域不再生成火点事件。
+- 新增单元测试复现日志中的细竖线高亮区域，确认不会触发火点检测、红色标注和 ThingsBoard 上报。
+- 更新实施文档，说明本地画面识别会过滤极细竖线高亮伪影。
+- 重新打包可执行 Jar，确保服务器拉取后直接使用修复版本。
+
+### Testing
+- 已执行 `mvn test`，结果通过：33 个测试全部通过，0 失败，0 错误，0 跳过。
+- 已执行 `mvn package`，结果通过：33 个测试全部通过，并成功重新生成 `target/infrared-camera-1.0.0.jar`。
+
+### Notes
+- `src/main/java/com/milkfoam/infraredcamera/fire/ThermalImageFireDetector.java`：新增极细竖线高亮伪影过滤逻辑。
+- `src/test/java/com/milkfoam/infraredcamera/fire/ThermalImageFireDetectorTest.java`：新增细竖线误报复现测试。
+- `docs/thermal-fire-detection-plan.md`：补充细竖线高亮伪影过滤说明。
+- `target/infrared-camera-1.0.0.jar`：重新打包后的服务器运行包。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：使用 `git revert <本次提交>` 回滚本轮细竖线误报过滤改动；或恢复上述文件到本轮修改前版本后重新执行 `mvn test && mvn package`。
