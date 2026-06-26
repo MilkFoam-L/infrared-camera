@@ -1,6 +1,8 @@
 const liveFrame = document.getElementById('liveFrame');
 const frameStatus = document.getElementById('frameStatus');
 const fireMask = document.getElementById('fireMask');
+const thresholdTestButton = document.getElementById('thresholdTestButton');
+const thresholdStatus = document.getElementById('thresholdStatus');
 const fireMaskContext = fireMask.getContext('2d', { willReadFrequently: true });
 const sourceCanvas = document.createElement('canvas');
 const sourceContext = sourceCanvas.getContext('2d', { willReadFrequently: true });
@@ -117,6 +119,45 @@ function drawFireMask(event) {
   fireMask.classList.remove('hidden', 'fading');
 }
 
+function thresholdMessage(event) {
+  if (!event) {
+    return '当前还没有火点事件，暂时没有红色像素阈值。';
+  }
+  const threshold = Number.isFinite(event.fireBrightnessThreshold) && event.fireBrightnessThreshold > 0
+    ? event.fireBrightnessThreshold
+    : null;
+  if (threshold === null) {
+    return '当前火点事件没有有效标红阈值。';
+  }
+  return `当前红色像素区域阈值：${threshold}（像素亮度达到该值才会标红）`;
+}
+
+function showThresholdStatus(message) {
+  thresholdStatus.textContent = message;
+  thresholdStatus.classList.remove('hidden');
+}
+
+async function showCurrentThreshold() {
+  if (latestEvent) {
+    showThresholdStatus(thresholdMessage(latestEvent));
+    return;
+  }
+
+  showThresholdStatus('正在读取最新火点阈值...');
+  try {
+    const response = await fetch('/api/fire-events/latest');
+    const payload = await response.json();
+    if (payload.fireDetected) {
+      latestEvent = payload.event;
+      showThresholdStatus(thresholdMessage(latestEvent));
+      return;
+    }
+    showThresholdStatus('当前还没有火点事件，暂时没有红色像素阈值。');
+  } catch (error) {
+    showThresholdStatus('读取阈值失败，请确认服务正在运行。');
+  }
+}
+
 function renderEvent(event) {
   latestEvent = event;
   drawFireMask(event);
@@ -158,6 +199,10 @@ liveFrame.addEventListener('load', () => {
 liveFrame.addEventListener('error', () => {
   frameStatus.textContent = '热成像画面加载失败，正在重试...';
   frameStatus.classList.remove('hidden');
+});
+
+thresholdTestButton.addEventListener('click', () => {
+  showCurrentThreshold();
 });
 
 window.addEventListener('resize', () => {

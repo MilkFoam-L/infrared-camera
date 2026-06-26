@@ -573,3 +573,22 @@
 - `docs/thermal-fire-detection-plan.md`：更新前后端阈值同源、显示器误报过滤和上报字段说明。
 - `target/infrared-camera-1.0.0.jar`：重新打包后的服务器运行包。
 - 回滚方式：使用 `git revert <本次提交>` 回滚本轮阈值同源和显示器误报过滤改动；或恢复上述文件到本轮修改前版本后重新执行 `mvn test && mvn package`。
+
+## 2026-06-26 - Task: 增加网页标红阈值测试按钮
+
+### What was done
+- 在热成像网页右上角新增“显示标红阈值”测试按钮。
+- 点击按钮后显示最近一次红色像素区域使用的 `fireBrightnessThreshold`，便于现场调整 `FIRE_BRIGHTNESS_THRESHOLD`。
+- 页面尚未收到火点事件时，按钮会主动读取 `/api/fire-events/latest`；如果仍无火点事件，会提示当前暂无红色像素阈值。
+- 重新打包可执行 Jar，确保服务器拉取后页面资源包含该测试按钮。
+
+### Testing
+- 已执行 `mvn package`，结果通过：32 个测试全部通过，0 失败，0 错误，0 跳过，并成功重新生成 `target/infrared-camera-1.0.0.jar`。
+
+### Notes
+- `src/main/resources/web/index.html`：新增阈值测试按钮和阈值显示区域。
+- `src/main/resources/web/style.css`：新增按钮和阈值提示浮层样式。
+- `src/main/resources/web/app.js`：新增读取并展示最近火点标红阈值的交互逻辑。
+- `target/infrared-camera-1.0.0.jar`：重新打包后的服务器运行包。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：使用 `git revert <本次提交>` 回滚本轮网页按钮改动；或恢复上述文件到本轮修改前版本后重新执行 `mvn package`。

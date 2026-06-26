@@ -64,5 +64,39 @@ body {
   z-index: 10;
 }
 
+.threshold-test-button {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  z-index: 20;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.72);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.threshold-test-button:hover {
+  background: rgba(30, 41, 59, 0.86);
+}
+
+.threshold-status {
+  position: absolute;
+  right: 18px;
+  top: 64px;
+  z-index: 20;
+  max-width: min(360px, calc(100vw - 36px));
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  color: #fee2e2;
+  background: rgba(127, 29, 29, 0.78);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .hidden { opacity: 0; pointer-events: none; }
 .fading { opacity: .42; }
