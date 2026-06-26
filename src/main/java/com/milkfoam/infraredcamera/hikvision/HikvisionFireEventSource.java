@@ -78,7 +78,7 @@ public final class HikvisionFireEventSource implements FireEventSource {
     queryThermalCapabilities();
     callback = (lCommand, pAlarmer, pAlarmInfo, dwBufLen, pUser) -> {
       if (lCommand == HCNetSdkLibrary.COMM_FIREDETECTION_ALARM) {
-        System.out.println("SDK_FIRE_ALARM_IGNORED command=COMM_FIREDETECTION_ALARM, reason=using local thermal image detection");
+        System.out.println("收到摄像头内置火点报警但已忽略：当前使用本地热成像画面检测逻辑");
       }
     };
 
@@ -165,13 +165,13 @@ public final class HikvisionFireEventSource implements FireEventSource {
 
   private FireDetectionEvent toLocalDetectionEvent(ThermalImageFireDetector.DetectedFire detection) {
     String eventId = String.format(Locale.ROOT, "local-frame-fire-%06d", localDetectionSequence.incrementAndGet());
-    System.out.println("LOCAL_THERMAL_FIRE_DETECTED eventId=" + eventId
-        + ", brightness=" + String.format(Locale.ROOT, "%.1f", detection.brightness())
-        + ", pixels=" + detection.pixelCount()
-        + ", rect=x=" + String.format(Locale.ROOT, "%.4f", detection.rect().x())
-        + ",y=" + String.format(Locale.ROOT, "%.4f", detection.rect().y())
-        + ",width=" + String.format(Locale.ROOT, "%.4f", detection.rect().width())
-        + ",height=" + String.format(Locale.ROOT, "%.4f", detection.rect().height()));
+    System.out.println("本地热成像画面检测到火点：事件ID=" + eventId
+        + "，亮度=" + String.format(Locale.ROOT, "%.1f", detection.brightness())
+        + "，像素数=" + detection.pixelCount()
+        + "，范围=x=" + String.format(Locale.ROOT, "%.4f", detection.rect().x())
+        + "，y=" + String.format(Locale.ROOT, "%.4f", detection.rect().y())
+        + "，宽=" + String.format(Locale.ROOT, "%.4f", detection.rect().width())
+        + "，高=" + String.format(Locale.ROOT, "%.4f", detection.rect().height()));
     return new FireDetectionEvent(
         eventId,
         config.cameraId(),

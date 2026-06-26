@@ -30,19 +30,19 @@ public final class ThingsBoardTelemetryClient implements AutoCloseable {
         .connectTimeout(Duration.ofSeconds(3))
         .build();
     if (config.enabled()) {
-      System.out.println("ThingsBoard telemetry enabled: " + config.telemetryUri());
+      System.out.println("ThingsBoard 上报已启用：" + config.telemetryUri());
     } else {
-      System.out.println("ThingsBoard telemetry disabled: missing --thingsboard-host or --thingsboard-token");
+      System.out.println("ThingsBoard 上报未启用：缺少地址或设备令牌");
     }
   }
 
   public void sendFireDetected(FireDetectionEvent event) {
     Objects.requireNonNull(event, "event");
     if (!config.enabled()) {
-      System.out.println("ThingsBoard telemetry skipped: telemetry is disabled, eventId=" + event.eventId());
+      System.out.println("ThingsBoard 上报跳过：上报未启用，事件ID=" + event.eventId());
       return;
     }
-    System.out.println("ThingsBoard telemetry queued: eventId=" + event.eventId());
+    System.out.println("ThingsBoard 上报已入队：事件ID=" + event.eventId());
     executor.execute(() -> postTelemetry(event));
   }
 
@@ -79,20 +79,20 @@ public final class ThingsBoardTelemetryClient implements AutoCloseable {
         .header("Content-Type", "application/json; charset=utf-8")
         .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
         .build();
-    System.out.println("ThingsBoard telemetry posting: eventId=" + event.eventId() + ", url=" + uri);
-    System.out.println("ThingsBoard telemetry payload: " + body);
+    System.out.println("ThingsBoard 正在上报：事件ID=" + event.eventId() + "，地址=" + uri);
+    System.out.println("ThingsBoard 上报内容：" + body);
     try {
       HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-      System.out.println("ThingsBoard telemetry response: eventId=" + event.eventId()
-          + ", status=" + response.statusCode()
-          + ", body=" + response.body());
+      System.out.println("ThingsBoard 上报响应：事件ID=" + event.eventId()
+          + "，状态码=" + response.statusCode()
+          + "，响应体=" + response.body());
       if (response.statusCode() < 200 || response.statusCode() >= 300) {
-        System.out.println("ThingsBoard telemetry failed: non-2xx status, eventId=" + event.eventId());
+        System.out.println("ThingsBoard 上报失败：状态码不是 2xx，事件ID=" + event.eventId());
       }
     } catch (Exception ex) {
-      System.out.println("ThingsBoard telemetry exception: eventId=" + event.eventId()
-          + ", type=" + ex.getClass().getName()
-          + ", message=" + ex.getMessage());
+      System.out.println("ThingsBoard 上报异常：事件ID=" + event.eventId()
+          + "，异常类型=" + ex.getClass().getName()
+          + "，异常信息=" + ex.getMessage());
       ex.printStackTrace(System.out);
     }
   }

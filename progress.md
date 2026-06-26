@@ -477,3 +477,25 @@
 - `docs/thermal-fire-detection-plan.md`：更新真实设备上报触发源说明。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：可执行本轮提交的 `git revert` 回滚；或恢复上述 Java 文件、测试、Jar 和文档到上一提交版本。
+
+## 2026-06-26 - Task: 将火点检测与上报日志改为中文
+
+### What was done
+- 确认当前上报语义：只有本地热成像画面检测到火点/高亮热源区域时才上报 ThingsBoard。
+- 将 Java 控制台中的火点检测状态、火点事件明细、本地画面识别日志和 ThingsBoard 上报日志改为中文。
+- 将 `thingsboard上报.txt` 的手工上报调试输出改为中文。
+- 更新实施文档，说明控制台输出为中文日志。
+- 重新打包并更新可执行 Jar，确保服务器拉取后直接使用中文日志版本。
+
+### Testing
+- 已执行 `mvn package`，结果通过：测试 29 个全部通过，并成功重新生成 `target/infrared-camera-1.0.0.jar`。
+
+### Notes
+- `src/main/java/com/milkfoam/infraredcamera/App.java`：将持续检测和火点事件日志改为中文。
+- `src/main/java/com/milkfoam/infraredcamera/hikvision/HikvisionFireEventSource.java`：将本地热成像画面识别日志和 SDK 报警忽略日志改为中文。
+- `src/main/java/com/milkfoam/infraredcamera/thingsboard/ThingsBoardTelemetryClient.java`：将 ThingsBoard 上报日志改为中文。
+- `thingsboard上报.txt`：将手工上报调试输出改为中文。
+- `target/infrared-camera-1.0.0.jar`：更新为中文日志版本。
+- `docs/thermal-fire-detection-plan.md`：更新中文日志说明。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：可执行本轮提交的 `git revert` 回滚；或恢复上述文件和 Jar 到上一提交版本。

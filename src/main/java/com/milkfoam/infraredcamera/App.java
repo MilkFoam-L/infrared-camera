@@ -63,7 +63,7 @@ public final class App {
     httpServer.start();
     source.start(event -> {
       latestFireTime.set(OffsetDateTime.now());
-      System.out.println("FIRE_DETECTED " + eventSummary(event));
+      System.out.println("检测到火点：" + eventSummary(event));
       eventBus.publish(event);
       thingsBoardClient.sendFireDetected(event);
     });
@@ -78,36 +78,36 @@ public final class App {
     OffsetDateTime now = OffsetDateTime.now();
     Optional<OffsetDateTime> fireTime = Optional.ofNullable(latestFireTime.get());
     if (fireTime.isEmpty()) {
-      System.out.println("FIRE_CHECK status=NO_FIRE, lastFire=never, time="
+      System.out.println("火点检测状态：未检测到火点，最近火点=无，检测时间="
           + now.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
       return;
     }
 
     long secondsSinceLastFire = Duration.between(fireTime.get(), now).toSeconds();
-    String status = secondsSinceLastFire <= 10 ? "FIRE_ACTIVE" : "NO_FIRE";
-    System.out.println("FIRE_CHECK status=" + status
-        + ", lastFire=" + fireTime.get().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-        + ", secondsSinceLastFire=" + secondsSinceLastFire
-        + ", time=" + now.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+    String status = secondsSinceLastFire <= 10 ? "最近检测到火点" : "未检测到新火点";
+    System.out.println("火点检测状态：" + status
+        + "，最近火点=" + fireTime.get().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+        + "，距离上次火点秒数=" + secondsSinceLastFire
+        + "，检测时间=" + now.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
   }
 
   private static String eventSummary(FireDetectionEvent event) {
-    return "eventId=" + event.eventId()
-        + ", cameraId=" + event.cameraId()
-        + ", channel=" + event.channelId()
-        + ", maxTemperature=" + String.format(Locale.ROOT, "%.1f", event.maxTemperature())
-        + ", distance=" + String.format(Locale.ROOT, "%.2f", event.targetDistance())
-        + ", rect=" + rectSummary(event.rect())
-        + ", highestPoint=" + pointSummary(event.highestPoint());
+    return "事件ID=" + event.eventId()
+        + "，摄像头=" + event.cameraId()
+        + "，通道=" + event.channelId()
+        + "，最高亮度/温度=" + String.format(Locale.ROOT, "%.1f", event.maxTemperature())
+        + "，距离=" + String.format(Locale.ROOT, "%.2f", event.targetDistance())
+        + "，火点范围=" + rectSummary(event.rect())
+        + "，最高点=" + pointSummary(event.highestPoint());
   }
 
   private static String rectSummary(NormalizedRect rect) {
-    return String.format(Locale.ROOT, "x=%.4f,y=%.4f,width=%.4f,height=%.4f",
+    return String.format(Locale.ROOT, "x=%.4f，y=%.4f，宽=%.4f，高=%.4f",
         rect.x(), rect.y(), rect.width(), rect.height());
   }
 
   private static String pointSummary(NormalizedPoint point) {
-    return String.format(Locale.ROOT, "x=%.4f,y=%.4f", point.x(), point.y());
+    return String.format(Locale.ROOT, "x=%.4f，y=%.4f", point.x(), point.y());
   }
 
   private static FireEventSource createSource(
