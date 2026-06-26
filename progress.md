@@ -454,3 +454,26 @@
 - `docs/thermal-fire-detection-plan.md`：更新真实设备脚本配置说明。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：可执行本轮提交的 `git revert` 回滚；或恢复启动脚本为上一提交版本。
+
+## 2026-06-26 - Task: 改为本地热成像画面识别触发上报
+
+### What was done
+- 新增后端热成像图像亮度检测器，直接分析每次抓取的热成像 JPEG，识别高亮热源像素连通区域。
+- 真实设备模式不再依赖海康 SDK 火点报警事件触发上报，SDK 火点报警只打印忽略日志。
+- 抓图检测到热源区域后生成 `LOCAL_THERMAL_FRAME_DETECTION` 事件，复用现有页面标注、持续检测日志和 ThingsBoard 上报链路。
+- 对本地图像识别上报做 5 秒节流，避免同一火源每秒重复刷屏和重复上报。
+- 新增单元测试覆盖亮图热源识别和暗图忽略。
+- 更新实施文档，说明当前上报触发源是我们自己的热成像画面识别结果。
+
+### Testing
+- 已执行 `mvn package`，结果通过：测试 29 个全部通过，并成功重新生成 `target/infrared-camera-1.0.0.jar`。
+
+### Notes
+- `src/main/java/com/milkfoam/infraredcamera/fire/ThermalImageFireDetector.java`：新增基于热成像画面亮度的本地火源区域检测。
+- `src/main/java/com/milkfoam/infraredcamera/hikvision/HikvisionThermalSnapshotClient.java`：抓图成功后执行本地热源识别并回调检测结果。
+- `src/main/java/com/milkfoam/infraredcamera/hikvision/HikvisionFireEventSource.java`：将本地识别结果转换成火点事件并上报，SDK 火警事件不再作为触发源。
+- `src/test/java/com/milkfoam/infraredcamera/fire/ThermalImageFireDetectorTest.java`：新增本地热源识别单元测试。
+- `target/infrared-camera-1.0.0.jar`：更新为包含本地画面识别上报逻辑的新可执行包。
+- `docs/thermal-fire-detection-plan.md`：更新真实设备上报触发源说明。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：可执行本轮提交的 `git revert` 回滚；或恢复上述 Java 文件、测试、Jar 和文档到上一提交版本。

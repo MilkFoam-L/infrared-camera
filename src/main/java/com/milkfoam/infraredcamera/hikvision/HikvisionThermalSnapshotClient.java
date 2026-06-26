@@ -1,31 +1,46 @@
 package com.milkfoam.infraredcamera.hikvision;
 
 import com.milkfoam.infraredcamera.fire.LiveFrameStore;
+import com.milkfoam.infraredcamera.fire.ThermalImageFireDetector;
 import com.sun.jna.Memory;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public final class HikvisionThermalSnapshotClient implements AutoCloseable {
 
   private static final int DEFAULT_BUFFER_SIZE = 512 * 1024;
   private static final long DEFAULT_INTERVAL_MILLIS = 1000L;
+  private static final long MIN_DETECTION_INTERVAL_MILLIS = 5000L;
 
   private final HCNetSdkLibrary sdk;
   private final int userId;
   private final int channelId;
   private final LiveFrameStore liveFrameStore;
+  private final Consumer<ThermalImageFireDetector.DetectedFire> detectionConsumer;
   private final int bufferSize;
   private ScheduledExecutorService executor;
+  private long lastDetectionAtMillis;
 
   public HikvisionThermalSnapshotClient(
       HCNetSdkLibrary sdk,
       int userId,
       int channelId,
       LiveFrameStore liveFrameStore) {
-    this(sdk, userId, channelId, liveFrameStore, DEFAULT_BUFFER_SIZE);
+    this(sdk, userId, channelId, liveFrameStore, detection -> { }, DEFAULT_BUFFER_SIZE);
+  }
+
+  public HikvisionThermalSnapshotClient(
+      HCNetSdkLibrary sdk,
+      int userId,
+      int channelId,
+      LiveFrameStore liveFrameStore,
+      Consumer<ThermalImageFireDetector.DetectedFire> detectionConsumer) {
+    this(sdk, userId, channelId, liveFrameStore, detectionConsumer, DEFAULT_BUFFER_SIZE);
   }
 
   HikvisionThermalSnapshotClient(
@@ -33,6 +48,7 @@ public final class HikvisionThermalSnapshotClient implements AutoCloseable {
       int userId,
       int channelId,
       LiveFrameStore liveFrameStore,
+      Consumer<ThermalImageFireDetector.DetectedFire> detectionConsumer,
       int bufferSize) {
     if (userId < 0) {
       throw new IllegalArgumentException("userId must be logged in");
@@ -47,6 +63,7 @@ public final class HikvisionThermalSnapshotClient implements AutoCloseable {
     this.userId = userId;
     this.channelId = channelId;
     this.liveFrameStore = Objects.requireNonNull(liveFrameStore, "liveFrameStore");
+    this.detectionConsumer = Objects.requireNonNull(detectionConsumer, "detectionConsumer");
     this.bufferSize = bufferSize;
   }
 
@@ -85,9 +102,24 @@ public final class HikvisionThermalSnapshotClient implements AutoCloseable {
         return false;
       }
       byte[] bytes = buffer.getByteArray(0, Math.min(returnedSize[0], bufferSize));
-      liveFrameStore.save("image/jpeg", Arrays.copyOf(bytes, bytes.length));
+      byte[] frameBytes = Arrays.copyOf(bytes, bytes.length);
+      liveFrameStore.save("image/jpeg", frameBytes);
+      detectFire(frameBytes);
       return true;
     }
+  }
+
+  private void detectFire(byte[] frameBytes) {
+    long now = System.currentTimeMillis();
+    if (now - lastDetectionAtMillis < MIN_DETECTION_INTERVAL_MILLIS) {
+      return;
+    }
+    Optional<ThermalImageFireDetector.DetectedFire> detected = ThermalImageFireDetector.detect(frameBytes);
+    if (detected.isEmpty()) {
+      return;
+    }
+    lastDetectionAtMillis = now;
+    detectionConsumer.accept(detected.get());
   }
 
   @Override

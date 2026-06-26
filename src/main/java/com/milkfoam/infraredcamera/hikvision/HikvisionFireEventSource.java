@@ -3,14 +3,18 @@ package com.milkfoam.infraredcamera.hikvision;
 import com.milkfoam.infraredcamera.fire.FireDetectionEvent;
 import com.milkfoam.infraredcamera.fire.FireSnapshotStore;
 import com.milkfoam.infraredcamera.fire.LiveFrameStore;
+import com.milkfoam.infraredcamera.fire.ThermalImageFireDetector;
 import com.milkfoam.infraredcamera.runtime.FireEventSource;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public final class HikvisionFireEventSource implements FireEventSource {
@@ -19,6 +23,7 @@ public final class HikvisionFireEventSource implements FireEventSource {
   private final FireSnapshotStore snapshotStore;
   private final LiveFrameStore liveFrameStore;
   private final HCNetSdkLibrary sdk;
+  private final AtomicInteger localDetectionSequence = new AtomicInteger();
   private final ExecutorService callbackExecutor = Executors.newSingleThreadExecutor(r -> {
     Thread thread = new Thread(r, "hikvision-fire-callback-worker");
     thread.setDaemon(true);
@@ -72,11 +77,9 @@ public final class HikvisionFireEventSource implements FireEventSource {
 
     queryThermalCapabilities();
     callback = (lCommand, pAlarmer, pAlarmInfo, dwBufLen, pUser) -> {
-      if (lCommand != HCNetSdkLibrary.COMM_FIREDETECTION_ALARM || pAlarmInfo == null) {
-        return;
+      if (lCommand == HCNetSdkLibrary.COMM_FIREDETECTION_ALARM) {
+        System.out.println("SDK_FIRE_ALARM_IGNORED command=COMM_FIREDETECTION_ALARM, reason=using local thermal image detection");
       }
-      FireDetectionEvent event = mapAlarm(pAlarmInfo);
-      callbackExecutor.execute(() -> eventConsumer.accept(event));
     };
 
     if (!sdk.NET_DVR_SetDVRMessageCallBack_V50(0, callback, Pointer.NULL)) {
@@ -92,7 +95,12 @@ public final class HikvisionFireEventSource implements FireEventSource {
       throw sdkException("NET_DVR_SetupAlarmChan_V41 failed");
     }
 
-    snapshotClient = new HikvisionThermalSnapshotClient(sdk, userId, config.thermalChannel(), liveFrameStore);
+    snapshotClient = new HikvisionThermalSnapshotClient(
+        sdk,
+        userId,
+        config.thermalChannel(),
+        liveFrameStore,
+        detection -> callbackExecutor.execute(() -> eventConsumer.accept(toLocalDetectionEvent(detection))));
     snapshotClient.start();
     thermometryClient = new HikvisionRealtimeThermometryClient(sdk, userId);
     thermometryClient.start(config.thermalChannel(), 0, measurement -> {
@@ -153,6 +161,30 @@ public final class HikvisionFireEventSource implements FireEventSource {
       }
       return output.getString(0, StandardCharsets.UTF_8.name());
     }
+  }
+
+  private FireDetectionEvent toLocalDetectionEvent(ThermalImageFireDetector.DetectedFire detection) {
+    String eventId = String.format(Locale.ROOT, "local-frame-fire-%06d", localDetectionSequence.incrementAndGet());
+    System.out.println("LOCAL_THERMAL_FIRE_DETECTED eventId=" + eventId
+        + ", brightness=" + String.format(Locale.ROOT, "%.1f", detection.brightness())
+        + ", pixels=" + detection.pixelCount()
+        + ", rect=x=" + String.format(Locale.ROOT, "%.4f", detection.rect().x())
+        + ",y=" + String.format(Locale.ROOT, "%.4f", detection.rect().y())
+        + ",width=" + String.format(Locale.ROOT, "%.4f", detection.rect().width())
+        + ",height=" + String.format(Locale.ROOT, "%.4f", detection.rect().height()));
+    return new FireDetectionEvent(
+        eventId,
+        config.cameraId(),
+        config.thermalChannel(),
+        config.host(),
+        "local_thermal_frame_detection",
+        OffsetDateTime.now(),
+        detection.brightness(),
+        0.0,
+        detection.rect(),
+        detection.highestPoint(),
+        "",
+        "LOCAL_THERMAL_FRAME_DETECTION");
   }
 
   private FireDetectionEvent mapAlarm(Pointer pAlarmInfo) {
