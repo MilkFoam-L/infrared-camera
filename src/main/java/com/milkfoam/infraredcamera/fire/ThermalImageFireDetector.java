@@ -15,6 +15,11 @@ public final class ThermalImageFireDetector {
   private static final double TOP_OSD_IGNORE_HEIGHT_RATIO = 0.14;
   private static final double BOTTOM_OSD_IGNORE_TOP_RATIO = 0.82;
   private static final double BOTTOM_OSD_IGNORE_LEFT_RATIO = 0.66;
+  private static final double MIN_DISPLAY_LIKE_WIDTH_RATIO = 0.05;
+  private static final double MIN_DISPLAY_LIKE_HEIGHT_RATIO = 0.03;
+  private static final double MIN_DISPLAY_LIKE_ASPECT_RATIO = 1.6;
+  private static final double MAX_DISPLAY_LIKE_ASPECT_RATIO = 4.0;
+  private static final double MIN_DISPLAY_LIKE_FILL_RATIO = 0.78;
 
   private ThermalImageFireDetector() {
   }
@@ -101,7 +106,7 @@ public final class ThermalImageFireDetector {
       }
     }
 
-    if (best == null) {
+    if (best == null || isDisplayLikeRegion(best, width, height)) {
       return Optional.empty();
     }
 
@@ -111,7 +116,21 @@ public final class ThermalImageFireDetector {
         Math.max(1, best.maxX - best.minX + 1) / (double) width,
         Math.max(1, best.maxY - best.minY + 1) / (double) height);
     NormalizedPoint point = new NormalizedPoint(best.maxXInComponent / (double) width, best.maxYInComponent / (double) height);
-    return Optional.of(new DetectedFire(rect, point, best.maxBrightness, best.pixelCount));
+    return Optional.of(new DetectedFire(rect, point, best.maxBrightness, best.pixelCount, threshold));
+  }
+
+  private static boolean isDisplayLikeRegion(Component component, int imageWidth, int imageHeight) {
+    int componentWidth = component.maxX - component.minX + 1;
+    int componentHeight = component.maxY - component.minY + 1;
+    double widthRatio = componentWidth / (double) imageWidth;
+    double heightRatio = componentHeight / (double) imageHeight;
+    double aspectRatio = componentWidth / (double) componentHeight;
+    double fillRatio = component.pixelCount / (double) (componentWidth * componentHeight);
+    return widthRatio >= MIN_DISPLAY_LIKE_WIDTH_RATIO
+        && heightRatio >= MIN_DISPLAY_LIKE_HEIGHT_RATIO
+        && aspectRatio >= MIN_DISPLAY_LIKE_ASPECT_RATIO
+        && aspectRatio <= MAX_DISPLAY_LIKE_ASPECT_RATIO
+        && fillRatio >= MIN_DISPLAY_LIKE_FILL_RATIO;
   }
 
   private static boolean isIgnoredOsdArea(int x, int y, int width, int height) {
@@ -172,7 +191,8 @@ public final class ThermalImageFireDetector {
       NormalizedRect rect,
       NormalizedPoint highestPoint,
       double brightness,
-      int pixelCount) {
+      int pixelCount,
+      int brightnessThreshold) {
   }
 
   private static final class Component {

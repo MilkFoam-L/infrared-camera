@@ -29,6 +29,7 @@ class ThermalImageFireDetectorTest {
     assertEquals(0.18, fire.rect().width(), 0.03);
     assertEquals(0.1875, fire.rect().height(), 0.03);
     assertTrue(fire.pixelCount() >= 24);
+    assertTrue(fire.brightnessThreshold() >= 170);
   }
 
   @Test
@@ -61,6 +62,19 @@ class ThermalImageFireDetectorTest {
     }
 
     assertTrue(ThermalImageFireDetector.detect(image).isEmpty());
+  }
+
+  @Test
+  void ignoresDisplayLikeBrightRectangle() {
+    BufferedImage image = new BufferedImage(120, 90, BufferedImage.TYPE_INT_RGB);
+    fill(image, new Color(35, 35, 35));
+    for (int y = 32; y < 57; y++) {
+      for (int x = 25; x < 85; x++) {
+        image.setRGB(x, y, Color.WHITE.getRGB());
+      }
+    }
+
+    assertTrue(ThermalImageFireDetector.detect(image, 245).isEmpty());
   }
 
   @Test

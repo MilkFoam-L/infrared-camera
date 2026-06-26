@@ -76,20 +76,13 @@ function drawFireMask(event) {
   const source = sourceContext.getImageData(left, top, width, height);
   const sourceData = source.data;
   const luminance = new Uint8Array(width * height);
-  let max = 0;
-  let sum = 0;
+  const threshold = Number.isFinite(event.fireBrightnessThreshold) && event.fireBrightnessThreshold > 0
+    ? event.fireBrightnessThreshold
+    : 255;
 
   for (let i = 0, p = 0; i < sourceData.length; i += 4, p += 1) {
-    const value = Math.round(sourceData[i] * 0.299 + sourceData[i + 1] * 0.587 + sourceData[i + 2] * 0.114);
-    luminance[p] = value;
-    if (value > max) {
-      max = value;
-    }
-    sum += value;
+    luminance[p] = Math.round(sourceData[i] * 0.299 + sourceData[i + 1] * 0.587 + sourceData[i + 2] * 0.114);
   }
-
-  const average = sum / luminance.length;
-  const threshold = Math.max(average + (max - average) * 0.52, max * 0.72, 120);
   const mask = fireMaskContext.createImageData(width, height);
   const maskData = mask.data;
 

@@ -41,6 +41,7 @@ class ThingsBoardTelemetryClientTest {
         12.25,
         new NormalizedRect(0.1, 0.2, 0.3, 0.4),
         new NormalizedPoint(0.25, 0.35),
+        245,
         "/api/fire-events/fire-001/snapshot",
         "COMM_FIREDETECTION_ALARM");
 
@@ -56,6 +57,7 @@ class ThingsBoardTelemetryClientTest {
     assertTrue(json.contains("\"target_distance\":12.250000"));
     assertTrue(json.contains("\"fire_x\":0.100000"));
     assertTrue(json.contains("\"highest_y\":0.350000"));
+    assertTrue(json.contains("\"fire_brightness_threshold\":245"));
     assertTrue(json.contains("\"event_time\":\"2026-06-23T09:30:00+08:00\""));
   }
 }

@@ -545,3 +545,31 @@
 - `docs/thermal-fire-detection-plan.md`：补充阈值配置说明。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：可执行本轮提交的 `git revert` 回滚；或恢复上述文件和 Jar 到上一提交版本。
+
+## 2026-06-26 - Task: 统一火点报警阈值与前端红色像素标注
+
+### What was done
+- 将后端本地热成像检测实际使用的火点亮度阈值写入火点事件，前端红色像素绘制改为直接使用同一个后端阈值，不再自行计算另一套标红阈值。
+- 增加显示器类误报过滤：对大块、规则、横向矩形的高亮区域进行过滤，避免显示器亮屏被当作火焰标红和上报。
+- ThingsBoard 遥测增加火点亮度阈值字段，便于排查现场阈值与报警/标红是否一致。
+- 更新部署说明，明确没有后端火点事件就不会显示红色像素，有红色像素即代表同源火点事件已触发报警/上报流程。
+
+### Testing
+- 已执行 `mvn test`，结果通过：32 个测试全部通过，0 失败，0 错误，0 跳过。
+- 已执行 `mvn package`，结果通过：重新生成 `target/infrared-camera-1.0.0.jar` 可执行包。
+- 新增显示器类高亮矩形过滤测试，确认规则亮屏不会触发火点检测。
+
+### Notes
+- `src/main/java/com/milkfoam/infraredcamera/fire/ThermalImageFireDetector.java`：返回本次检测实际亮度阈值，并过滤显示器类规则矩形高亮区域。
+- `src/main/java/com/milkfoam/infraredcamera/fire/FireDetectionEvent.java`：新增 `fireBrightnessThreshold` 事件字段并输出到 JSON。
+- `src/main/java/com/milkfoam/infraredcamera/hikvision/HikvisionFireEventSource.java`：本地火点事件携带后端检测阈值，并在中文日志中输出标红阈值。
+- `src/main/java/com/milkfoam/infraredcamera/hikvision/HikvisionFireAlarmMapper.java`：兼容 SDK 火点事件模型的新增阈值字段。
+- `src/main/java/com/milkfoam/infraredcamera/runtime/MockFireEventSource.java`：模拟火点事件补齐阈值字段。
+- `src/main/java/com/milkfoam/infraredcamera/thingsboard/ThingsBoardTelemetryClient.java`：ThingsBoard 遥测增加 `fire_brightness_threshold` 字段。
+- `src/main/resources/web/app.js`：前端红色像素绘制改为使用后端事件阈值，取消前端独立阈值计算。
+- `src/test/java/com/milkfoam/infraredcamera/fire/ThermalImageFireDetectorTest.java`：新增显示器类误报过滤测试，并校验检测结果携带阈值。
+- `src/test/java/com/milkfoam/infraredcamera/fire/FireModelTest.java`：校验事件 JSON 输出火点亮度阈值。
+- `src/test/java/com/milkfoam/infraredcamera/thingsboard/ThingsBoardTelemetryClientTest.java`：校验 ThingsBoard 上报包含火点亮度阈值。
+- `docs/thermal-fire-detection-plan.md`：更新前后端阈值同源、显示器误报过滤和上报字段说明。
+- `target/infrared-camera-1.0.0.jar`：重新打包后的服务器运行包。
+- 回滚方式：使用 `git revert <本次提交>` 回滚本轮阈值同源和显示器误报过滤改动；或恢复上述文件到本轮修改前版本后重新执行 `mvn test && mvn package`。

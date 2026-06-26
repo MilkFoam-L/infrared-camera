@@ -28,6 +28,7 @@ public final class HikvisionFireAlarmMapper {
         alarm.targetDistance(),
         new NormalizedRect(alarm.rectX(), alarm.rectY(), alarm.rectWidth(), alarm.rectHeight()),
         new NormalizedPoint(alarm.pointX(), alarm.pointY()),
+        0,
         "/api/fire-events/" + eventId + "/snapshot",
         alarm.rawCommand());
   }

@@ -16,6 +16,7 @@ public record FireDetectionEvent(
     double targetDistance,
     NormalizedRect rect,
     NormalizedPoint highestPoint,
+    int fireBrightnessThreshold,
     String snapshotUrl,
     String rawCommand) {
 
@@ -31,6 +32,9 @@ public record FireDetectionEvent(
     Objects.requireNonNull(rawCommand, "rawCommand");
     if (channelId <= 0) {
       throw new IllegalArgumentException("channelId must be positive");
+    }
+    if (fireBrightnessThreshold < 0 || fireBrightnessThreshold > 255) {
+      throw new IllegalArgumentException("fireBrightnessThreshold must be between 0 and 255");
     }
   }
 
@@ -52,6 +56,7 @@ public record FireDetectionEvent(
         + "\"highestPoint\":{"
         + number("x", highestPoint.x()) + ","
         + number("y", highestPoint.y()) + "},"
+        + number("fireBrightnessThreshold", fireBrightnessThreshold) + ","
         + json("snapshotUrl", snapshotUrl) + ","
         + json("rawCommand", rawCommand)
         + "}";

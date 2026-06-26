@@ -134,8 +134,8 @@ Java 接入路径：
 1. 后端通过 `NET_DVR_CaptureJPEGPicture_NEW` 从热成像通道抓取 JPEG，并通过 `/api/live-frame` 提供最新画面。
 2. 前端每秒刷新 `/api/live-frame`，页面主体只展示摄像头热成像画面。
 3. 通过 `EventSource` 连接 `/api/fire-events/stream`。
-4. 接收火点事件后以前端画布读取真实画面像素，只在报警区域内按亮度阈值把火源轮廓像素标为红色。
-5. `rect.x/y/width/height` 只作为火源像素搜索范围，不再直接绘制整块矩形框。
+4. 接收火点事件后以前端画布读取真实画面像素，只在报警区域内按后端事件携带的同一个 `fireBrightnessThreshold` 把火源轮廓像素标为红色。
+5. `rect.x/y/width/height` 只作为火源像素搜索范围，不再直接绘制整块矩形框；没有后端火点事件就不会出现红色像素。
 6. 新报警刷新红色像素标注，旧标注短时间后变淡并清除；页面不再显示右侧报警信息面板。
 
 ### 第六步：启动实时测温长连接
@@ -246,15 +246,16 @@ java -jar target/infrared-camera-1.0.0.jar \
 
 - 服务器只需 `git pull` 获取最新代码、`target/infrared-camera-1.0.0.jar` 和 `EN-HCNetSDKV6.1.9.4_build20220412_win64/lib/`，无需先安装 Maven 打包或手动拷贝 SDK 即可运行脚本。
 - `start-hikvision-fire-detection.bat` 顶部的 `FIRE_BRIGHTNESS_THRESHOLD` 是火点亮度阈值，默认 `245`；人的热源如果低于该阈值不会触发红色像素标注和 ThingsBoard 上报。
+- 后端每次检测会把实际用于报警的 `fireBrightnessThreshold` 写入事件，前端红色像素绘制直接使用该阈值，不再使用另一套前端阈值，确保有红色像素时就是已报警/已上报的同源火点事件。
 - 页面主体只展示 `/api/live-frame` 返回的热成像抓图，红色像素标注会按火源高亮轮廓叠加在真实画面上。
 - 当前抓图刷新为秒级刷新，不是 25fps 视频流；如需低延迟视频，后续需要单独接 RTSP 转 HLS/WebRTC。
-- 真实设备模式不再依赖海康 SDK 火点报警事件触发上报；后端会在每次抓取热成像 JPEG 后自行分析高亮热源像素区域，并排除顶部时间/星期、右下角 Camera 等 OSD 叠字区域；只有高亮区域达到 `FIRE_BRIGHTNESS_THRESHOLD` 配置阈值后，才生成 `LOCAL_THERMAL_FRAME_DETECTION` 事件。
+- 真实设备模式不再依赖海康 SDK 火点报警事件触发上报；后端会在每次抓取热成像 JPEG 后自行分析高亮热源像素区域，并排除顶部时间/星期、右下角 Camera 等 OSD 叠字区域，同时过滤显示器这类大块规则矩形亮屏；只有确认的火焰高亮区域达到 `FIRE_BRIGHTNESS_THRESHOLD` 配置阈值后，才生成 `LOCAL_THERMAL_FRAME_DETECTION` 事件。
 - 收到本地热成像画面检测事件后会先更新本地页面，再异步向 ThingsBoard 上报遥测；未配置 `--thingsboard-host` 或 `--thingsboard-token` 时不上报云端。
 - 启动窗口会实时显示 Java 输出；程序每 5 秒输出一条中文火点检测状态日志，画面检测到火源时输出中文火点事件明细。
 - 控制台会输出中文 ThingsBoard 上传开关、目标地址、事件 ID、请求 JSON、响应状态码、响应体和异常栈，便于排查为什么未上传成功。
 - `thingsboard上报.txt` 是手工验证 ThingsBoard 链路的 Python 调试脚本，ThingsBoard 地址和设备访问令牌直接在文件顶部变量中配置，不读取电脑环境变量。
 - ThingsBoard 上报地址格式：`http://<thingsboard-host>/api/v1/<thingsboard-token>/telemetry`。
-- 上报基础字段包含 `warning_flag=1`、`warning_status=1`，同时附带摄像头、通道、设备 IP、事件 ID、最高温、距离、火点框坐标、最高温点和事件时间。
+- 上报基础字段包含 `warning_flag=1`、`warning_status=1`，同时附带摄像头、通道、设备 IP、事件 ID、最高温、距离、火点框坐标、最高温点、火点亮度阈值和事件时间。
 - `--sdk-lib` 可传绝对路径，也可省略并让 JNA 从系统库路径查找。
 - Windows 使用 `HCNetSDK.dll`，Linux 使用 `libhcnetsdk.so`。
 - Linux 还需要按海康 Java 开发指南配置 `HCNetSDKCom`、`libcrypto.so`、`libssl.so` 等依赖库路径。

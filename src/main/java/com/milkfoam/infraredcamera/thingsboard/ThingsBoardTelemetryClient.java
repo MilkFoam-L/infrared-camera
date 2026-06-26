@@ -67,6 +67,7 @@ public final class ThingsBoardTelemetryClient implements AutoCloseable {
         + number("fire_height", event.rect().height()) + ","
         + number("highest_x", event.highestPoint().x()) + ","
         + number("highest_y", event.highestPoint().y()) + ","
+        + number("fire_brightness_threshold", event.fireBrightnessThreshold()) + ","
         + json("event_time", event.eventTime().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
         + "}";
   }

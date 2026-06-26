@@ -48,6 +48,7 @@ class FireModelTest {
         12.0,
         new NormalizedRect(0.4, 0.2, 0.1, 0.2),
         new NormalizedPoint(0.45, 0.3),
+        245,
         "/api/fire-events/fire-1/snapshot",
         "COMM_FIREDETECTION_ALARM");
 
@@ -58,6 +59,7 @@ class FireModelTest {
     assertEquals(2, status.channelId());
     assertEquals(86.5, status.maxTemperature());
     assertEquals(0.4, status.rect().x());
+    assertTrue(event.toJson().contains("\"fireBrightnessThreshold\":245"));
   }
 
   @Test

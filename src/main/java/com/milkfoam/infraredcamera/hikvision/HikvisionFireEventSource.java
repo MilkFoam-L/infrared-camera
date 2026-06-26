@@ -191,6 +191,7 @@ public final class HikvisionFireEventSource implements FireEventSource {
     String eventId = String.format(Locale.ROOT, "local-frame-fire-%06d", localDetectionSequence.incrementAndGet());
     System.out.println("本地热成像画面检测到火点：事件ID=" + eventId
         + "，亮度=" + String.format(Locale.ROOT, "%.1f", detection.brightness())
+        + "，标红阈值=" + detection.brightnessThreshold()
         + "，像素数=" + detection.pixelCount()
         + "，范围=x=" + String.format(Locale.ROOT, "%.4f", detection.rect().x())
         + "，y=" + String.format(Locale.ROOT, "%.4f", detection.rect().y())
@@ -207,6 +208,7 @@ public final class HikvisionFireEventSource implements FireEventSource {
         0.0,
         detection.rect(),
         detection.highestPoint(),
+        detection.brightnessThreshold(),
         "",
         "LOCAL_THERMAL_FRAME_DETECTION");
   }

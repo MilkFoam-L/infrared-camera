@@ -62,6 +62,7 @@ public final class MockFireEventSource implements FireEventSource {
         distance,
         new NormalizedRect(x, y, width, height),
         new NormalizedPoint(pointX, pointY),
+        170,
         "/api/fire-events/" + eventId + "/snapshot",
         "COMM_FIREDETECTION_ALARM");
   }
