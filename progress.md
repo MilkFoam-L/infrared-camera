@@ -396,3 +396,23 @@
 - `docs/thermal-fire-detection-plan.md`：补充调试脚本说明。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：可执行本轮提交的 `git revert` 回滚；或删除 `thingsboard上报.txt` 并恢复 `.gitignore` 对该文件的忽略规则。
+
+## 2026-06-26 - Task: 增加持续火焰检测控制台日志
+
+### What was done
+- 增加火焰检测心跳日志，程序每 5 秒输出一条 `FIRE_CHECK`，显示当前是否最近检测到火焰、最近火点时间和距离上次火点的秒数。
+- 收到火点报警时输出 `FIRE_DETECTED` 明细，包含事件 ID、摄像头、通道、最高温、距离、火点范围和最高温点。
+- 调整 Windows 启动脚本，让 Java 输出实时显示在当前控制台，不再等程序退出后才从日志文件看到结果。
+- 重新打包并更新 `target/infrared-camera-1.0.0.jar`，确保服务器拉取后直接运行最新日志逻辑。
+- 更新实施文档，说明控制台会实时显示 `FIRE_CHECK`、`FIRE_DETECTED` 和 ThingsBoard 上传日志。
+
+### Testing
+- 已执行 `mvn package`，结果通过：测试 27 个全部通过，并成功重新生成 `target/infrared-camera-1.0.0.jar`。
+
+### Notes
+- `src/main/java/com/milkfoam/infraredcamera/App.java`：新增持续检测心跳日志和火点事件明细日志。
+- `start-hikvision-fire-detection.bat`：Java 输出改为实时显示在当前控制台。
+- `target/infrared-camera-1.0.0.jar`：更新为包含持续检测日志的新可执行包。
+- `docs/thermal-fire-detection-plan.md`：补充实时控制台日志说明。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：可执行本轮提交的 `git revert` 回滚；或恢复 `App.java`、`start-hikvision-fire-detection.bat`、`target/infrared-camera-1.0.0.jar` 和文档到上一提交版本。

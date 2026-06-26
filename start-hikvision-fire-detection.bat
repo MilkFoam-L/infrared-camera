@@ -69,6 +69,7 @@ echo ThingsBoard: http://%THINGSBOARD_HOST%
 echo Log file: %LOG_FILE%
 echo.
 echo Starting service. Do not close this window if it starts successfully.
+echo Java logs will be displayed in this console in real time.
 echo Open browser: http://127.0.0.1:%HTTP_PORT%/
 echo.
 
@@ -82,7 +83,7 @@ echo THERMAL_CHANNEL=%THERMAL_CHANNEL% >> "%LOG_FILE%"
 echo THINGSBOARD_HOST=%THINGSBOARD_HOST% >> "%LOG_FILE%"
 java -version >> "%LOG_FILE%" 2>&1
 
-call java -jar "%JAR%" --mode=hikvision --http-port=%HTTP_PORT% --camera-id=%CAMERA_ID% --host=%CAMERA_HOST% --port=%CAMERA_PORT% --username=%CAMERA_USER% --password="%CAMERA_PASSWORD%" --channel=%THERMAL_CHANNEL% --sdk-lib="%SDK_DLL%" --thingsboard-host="%THINGSBOARD_HOST%" --thingsboard-token="%THINGSBOARD_TOKEN%" >> "%LOG_FILE%" 2>&1
+call java -jar "%JAR%" --mode=hikvision --http-port=%HTTP_PORT% --camera-id=%CAMERA_ID% --host=%CAMERA_HOST% --port=%CAMERA_PORT% --username=%CAMERA_USER% --password="%CAMERA_PASSWORD%" --channel=%THERMAL_CHANNEL% --sdk-lib="%SDK_DLL%" --thingsboard-host="%THINGSBOARD_HOST%" --thingsboard-token="%THINGSBOARD_TOKEN%"
 set "APP_EXIT_CODE=%ERRORLEVEL%"
 
 echo.
@@ -99,7 +100,7 @@ if exist "%LOG_FILE%" (
 )
 echo ================ LOG END ==================
 echo.
-echo Copy the log text above and send it to the developer.
+echo Copy the log text above and any Java console output above it, then send it to the developer.
 goto HOLD
 
 :END

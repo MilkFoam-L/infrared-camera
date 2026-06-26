@@ -248,7 +248,8 @@ java -jar target/infrared-camera-1.0.0.jar \
 - 页面主体只展示 `/api/live-frame` 返回的热成像抓图，红色像素标注会按火源高亮轮廓叠加在真实画面上。
 - 当前抓图刷新为秒级刷新，不是 25fps 视频流；如需低延迟视频，后续需要单独接 RTSP 转 HLS/WebRTC。
 - 收到火点事件后会先更新本地页面，再异步向 ThingsBoard 上报遥测；未配置 `--thingsboard-host` 或 `--thingsboard-token` 时不上报云端。
-- 控制台和 `start-hikvision-fire-detection.log` 会输出 ThingsBoard 上传开关、目标地址、事件 ID、请求 JSON、响应状态码、响应体和异常栈，便于排查为什么未上传成功。
+- 启动窗口会实时显示 Java 输出；程序每 5 秒输出一条 `FIRE_CHECK` 检测状态日志，收到火点报警时输出 `FIRE_DETECTED` 事件明细。
+- 控制台会输出 ThingsBoard 上传开关、目标地址、事件 ID、请求 JSON、响应状态码、响应体和异常栈，便于排查为什么未上传成功。
 - `thingsboard上报.txt` 是手工验证 ThingsBoard 链路的 Python 调试脚本，令牌需通过环境变量 `THINGSBOARD_TOKEN` 或命令行参数传入，不在文件中写死。
 - ThingsBoard 上报地址格式：`http://<thingsboard-host>/api/v1/<thingsboard-token>/telemetry`。
 - 上报基础字段包含 `warning_flag=1`、`warning_status=1`，同时附带摄像头、通道、设备 IP、事件 ID、最高温、距离、火点框坐标、最高温点和事件时间。

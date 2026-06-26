@@ -1,7 +1,10 @@
 package com.milkfoam.infraredcamera;
 
+import com.milkfoam.infraredcamera.fire.FireDetectionEvent;
 import com.milkfoam.infraredcamera.fire.FireSnapshotStore;
 import com.milkfoam.infraredcamera.fire.LiveFrameStore;
+import com.milkfoam.infraredcamera.fire.NormalizedPoint;
+import com.milkfoam.infraredcamera.fire.NormalizedRect;
 import com.milkfoam.infraredcamera.hikvision.HikvisionClientConfig;
 import com.milkfoam.infraredcamera.hikvision.HikvisionFireEventSource;
 import com.milkfoam.infraredcamera.runtime.FireEventBus;
@@ -10,9 +13,18 @@ import com.milkfoam.infraredcamera.runtime.MockFireEventSource;
 import com.milkfoam.infraredcamera.thingsboard.ThingsBoardConfig;
 import com.milkfoam.infraredcamera.thingsboard.ThingsBoardTelemetryClient;
 import com.milkfoam.infraredcamera.web.FireDetectionHttpServer;
+import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class App {
 
@@ -34,8 +46,15 @@ public final class App {
     ThingsBoardTelemetryClient thingsBoardClient = new ThingsBoardTelemetryClient(new ThingsBoardConfig(
         options.get("thingsboard-host"),
         options.get("thingsboard-token")));
+    AtomicReference<OffsetDateTime> latestFireTime = new AtomicReference<>();
+    ScheduledExecutorService detectionLogger = Executors.newSingleThreadScheduledExecutor(r -> {
+      Thread thread = new Thread(r, "fire-detection-status-logger");
+      thread.setDaemon(true);
+      return thread;
+    });
 
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      detectionLogger.shutdownNow();
       source.close();
       thingsBoardClient.close();
       httpServer.close();
@@ -43,13 +62,52 @@ public final class App {
 
     httpServer.start();
     source.start(event -> {
+      latestFireTime.set(OffsetDateTime.now());
+      System.out.println("FIRE_DETECTED " + eventSummary(event));
       eventBus.publish(event);
       thingsBoardClient.sendFireDetected(event);
     });
+    detectionLogger.scheduleAtFixedRate(() -> logDetectionStatus(latestFireTime), 0, 5, TimeUnit.SECONDS);
     System.out.println("热成像火点检测服务已启动");
     System.out.println("模式: " + mode);
     System.out.println("访问: http://127.0.0.1:" + httpServer.port() + "/");
     new CountDownLatch(1).await();
+  }
+
+  private static void logDetectionStatus(AtomicReference<OffsetDateTime> latestFireTime) {
+    OffsetDateTime now = OffsetDateTime.now();
+    Optional<OffsetDateTime> fireTime = Optional.ofNullable(latestFireTime.get());
+    if (fireTime.isEmpty()) {
+      System.out.println("FIRE_CHECK status=NO_FIRE, lastFire=never, time="
+          + now.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+      return;
+    }
+
+    long secondsSinceLastFire = Duration.between(fireTime.get(), now).toSeconds();
+    String status = secondsSinceLastFire <= 10 ? "FIRE_ACTIVE" : "NO_FIRE";
+    System.out.println("FIRE_CHECK status=" + status
+        + ", lastFire=" + fireTime.get().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+        + ", secondsSinceLastFire=" + secondsSinceLastFire
+        + ", time=" + now.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+  }
+
+  private static String eventSummary(FireDetectionEvent event) {
+    return "eventId=" + event.eventId()
+        + ", cameraId=" + event.cameraId()
+        + ", channel=" + event.channelId()
+        + ", maxTemperature=" + String.format(Locale.ROOT, "%.1f", event.maxTemperature())
+        + ", distance=" + String.format(Locale.ROOT, "%.2f", event.targetDistance())
+        + ", rect=" + rectSummary(event.rect())
+        + ", highestPoint=" + pointSummary(event.highestPoint());
+  }
+
+  private static String rectSummary(NormalizedRect rect) {
+    return String.format(Locale.ROOT, "x=%.4f,y=%.4f,width=%.4f,height=%.4f",
+        rect.x(), rect.y(), rect.width(), rect.height());
+  }
+
+  private static String pointSummary(NormalizedPoint point) {
+    return String.format(Locale.ROOT, "x=%.4f,y=%.4f", point.x(), point.y());
   }
 
   private static FireEventSource createSource(
