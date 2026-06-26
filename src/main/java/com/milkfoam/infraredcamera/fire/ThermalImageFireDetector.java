@@ -12,6 +12,9 @@ public final class ThermalImageFireDetector {
   private static final int MIN_COMPONENT_PIXELS = 24;
   private static final int MIN_BRIGHTNESS = 170;
   private static final double THRESHOLD_RATIO = 0.72;
+  private static final double TOP_OSD_IGNORE_HEIGHT_RATIO = 0.14;
+  private static final double BOTTOM_OSD_IGNORE_TOP_RATIO = 0.82;
+  private static final double BOTTOM_OSD_IGNORE_LEFT_RATIO = 0.66;
 
   private ThermalImageFireDetector() {
   }
@@ -34,20 +37,26 @@ public final class ThermalImageFireDetector {
     int height = image.getHeight();
     int[] luminance = new int[width * height];
     long sum = 0;
+    int validPixelCount = 0;
     int max = 0;
     int maxX = 0;
     int maxY = 0;
 
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
+        int index = y * width + x;
+        if (isIgnoredOsdArea(x, y, width, height)) {
+          luminance[index] = 0;
+          continue;
+        }
         int rgb = image.getRGB(x, y);
         int r = (rgb >> 16) & 0xFF;
         int g = (rgb >> 8) & 0xFF;
         int b = rgb & 0xFF;
         int value = (int) Math.round(r * 0.299 + g * 0.587 + b * 0.114);
-        int index = y * width + x;
         luminance[index] = value;
         sum += value;
+        validPixelCount++;
         if (value > max) {
           max = value;
           maxX = x;
@@ -56,7 +65,11 @@ public final class ThermalImageFireDetector {
       }
     }
 
-    double average = sum / (double) luminance.length;
+    if (validPixelCount == 0) {
+      return Optional.empty();
+    }
+
+    double average = sum / (double) validPixelCount;
     int threshold = (int) Math.max(MIN_BRIGHTNESS, average + (max - average) * THRESHOLD_RATIO);
     if (max < MIN_BRIGHTNESS) {
       return Optional.empty();
@@ -69,7 +82,7 @@ public final class ThermalImageFireDetector {
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
         int start = y * width + x;
-        if (visited[start] || luminance[start] < threshold) {
+        if (isIgnoredOsdArea(x, y, width, height) || visited[start] || luminance[start] < threshold) {
           continue;
         }
 
@@ -91,6 +104,13 @@ public final class ThermalImageFireDetector {
         Math.max(1, best.maxY - best.minY + 1) / (double) height);
     NormalizedPoint point = new NormalizedPoint(best.maxXInComponent / (double) width, best.maxYInComponent / (double) height);
     return Optional.of(new DetectedFire(rect, point, best.maxBrightness, best.pixelCount));
+  }
+
+  private static boolean isIgnoredOsdArea(int x, int y, int width, int height) {
+    if (y < height * TOP_OSD_IGNORE_HEIGHT_RATIO) {
+      return true;
+    }
+    return y > height * BOTTOM_OSD_IGNORE_TOP_RATIO && x > width * BOTTOM_OSD_IGNORE_LEFT_RATIO;
   }
 
   private static Component floodFill(

@@ -5,12 +5,23 @@ const fireMaskContext = fireMask.getContext('2d', { willReadFrequently: true });
 const sourceCanvas = document.createElement('canvas');
 const sourceContext = sourceCanvas.getContext('2d', { willReadFrequently: true });
 
+const TOP_OSD_IGNORE_HEIGHT_RATIO = 0.14;
+const BOTTOM_OSD_IGNORE_TOP_RATIO = 0.82;
+const BOTTOM_OSD_IGNORE_LEFT_RATIO = 0.66;
+
 let latestEvent = null;
 let fadeTimer = null;
 let clearTimer = null;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function isIgnoredOsdArea(x, y, width, height) {
+  if (y < height * TOP_OSD_IGNORE_HEIGHT_RATIO) {
+    return true;
+  }
+  return y > height * BOTTOM_OSD_IGNORE_TOP_RATIO && x > width * BOTTOM_OSD_IGNORE_LEFT_RATIO;
 }
 
 function renderedFrameRect() {
@@ -85,7 +96,7 @@ function drawFireMask(event) {
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const p = y * width + x;
-      if (luminance[p] < threshold) {
+      if (isIgnoredOsdArea(left + x, top + y, imageWidth, imageHeight) || luminance[p] < threshold) {
         continue;
       }
 

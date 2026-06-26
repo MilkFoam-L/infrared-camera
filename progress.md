@@ -499,3 +499,24 @@
 - `docs/thermal-fire-detection-plan.md`：更新中文日志说明。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：可执行本轮提交的 `git revert` 回滚；或恢复上述文件和 Jar 到上一提交版本。
+
+## 2026-06-26 - Task: 排除摄像头 OSD 叠字误识别为火点
+
+### What was done
+- 修复顶部时间/星期叠字被本地亮度检测误识别为火点的问题。
+- 后端热成像画面检测时排除顶部 OSD 区域，以及右下角 Camera 字样区域，不再将这些叠字区域纳入火点候选区域。
+- 前端红色像素标注也同步排除 OSD 区域，避免旧事件或异常区域在叠字上标红。
+- 新增单元测试覆盖顶部时间/星期和右下角 Camera 叠字高亮区域，确保不会被识别成火点。
+- 更新实施文档，说明本地画面识别会排除 OSD 叠字区域。
+
+### Testing
+- 已执行 `mvn package`，结果通过：测试 30 个全部通过，并成功重新生成 `target/infrared-camera-1.0.0.jar`。
+
+### Notes
+- `src/main/java/com/milkfoam/infraredcamera/fire/ThermalImageFireDetector.java`：新增 OSD 忽略区域，排除顶部和右下角叠字区域。
+- `src/test/java/com/milkfoam/infraredcamera/fire/ThermalImageFireDetectorTest.java`：新增叠字区域不触发火点识别的测试。
+- `src/main/resources/web/app.js`：前端标红像素同步忽略 OSD 区域。
+- `target/infrared-camera-1.0.0.jar`：更新为排除 OSD 误识别的新可执行包。
+- `docs/thermal-fire-detection-plan.md`：补充 OSD 区域排除说明。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：可执行本轮提交的 `git revert` 回滚；或恢复上述文件和 Jar 到上一提交版本。

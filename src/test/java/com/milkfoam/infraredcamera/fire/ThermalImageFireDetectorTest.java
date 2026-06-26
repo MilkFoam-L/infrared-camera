@@ -32,6 +32,24 @@ class ThermalImageFireDetectorTest {
   }
 
   @Test
+  void ignoresBrightCameraOverlayTextAreas() {
+    BufferedImage image = new BufferedImage(100, 80, BufferedImage.TYPE_INT_RGB);
+    fill(image, new Color(35, 35, 35));
+    for (int y = 2; y < 8; y++) {
+      for (int x = 5; x < 70; x++) {
+        image.setRGB(x, y, Color.WHITE.getRGB());
+      }
+    }
+    for (int y = 68; y < 75; y++) {
+      for (int x = 70; x < 96; x++) {
+        image.setRGB(x, y, Color.WHITE.getRGB());
+      }
+    }
+
+    assertTrue(ThermalImageFireDetector.detect(image).isEmpty());
+  }
+
+  @Test
   void ignoresDarkImageWithoutFireRegion() {
     BufferedImage image = new BufferedImage(100, 80, BufferedImage.TYPE_INT_RGB);
     fill(image, new Color(35, 35, 35));
