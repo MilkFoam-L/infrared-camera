@@ -376,3 +376,23 @@
 - `docs/thermal-fire-detection-plan.md`：补充服务器无需手动拷贝 SDK 的说明。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：可执行本轮提交的 `git revert` 回滚 SDK 运行库提交；或删除仓库中的 `EN-HCNetSDKV6.1.9.4_build20220412_win64/lib/` 并恢复 `.gitignore` 为完整忽略 SDK 目录。
+
+## 2026-06-24 - Task: 提交 ThingsBoard 手工上报调试脚本
+
+### What was done
+- 梳理当前摄像头火点事件上报逻辑：火点事件先更新本地页面，再异步上报 ThingsBoard。
+- 将 `thingsboard上报.txt` 改为可提交的安全调试脚本，移除写死的真实设备令牌，改为通过环境变量或命令行参数传入。
+- 调试脚本增加目标地址、请求体、响应状态码和响应体输出，便于单独验证 ThingsBoard 链路。
+- 调整 `.gitignore`，允许将 `thingsboard上报.txt` 纳入 Git。
+- 更新实施文档，说明该脚本的用途和令牌传入方式。
+
+### Testing
+- 已执行 `python -m py_compile "thingsboard上报.txt"`，结果通过，脚本语法正确。
+- 未直接向 ThingsBoard 发起真实请求，避免在工具调用中使用或暴露真实设备令牌。
+
+### Notes
+- `thingsboard上报.txt`：改为安全的 Python 手工上报调试脚本，不再写死 token。
+- `.gitignore`：移除对 `thingsboard上报.txt` 的忽略规则，并忽略 Python 语法校验生成的 `__pycache__/`。
+- `docs/thermal-fire-detection-plan.md`：补充调试脚本说明。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：可执行本轮提交的 `git revert` 回滚；或删除 `thingsboard上报.txt` 并恢复 `.gitignore` 对该文件的忽略规则。
