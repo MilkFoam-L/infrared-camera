@@ -32,6 +32,20 @@ class ThermalImageFireDetectorTest {
   }
 
   @Test
+  void ignoresWarmHumanLikeRegionBelowConfiguredThreshold() {
+    BufferedImage image = new BufferedImage(100, 80, BufferedImage.TYPE_INT_RGB);
+    fill(image, new Color(35, 35, 35));
+    Color warmHumanLike = new Color(220, 220, 220);
+    for (int y = 28; y < 52; y++) {
+      for (int x = 12; x < 34; x++) {
+        image.setRGB(x, y, warmHumanLike.getRGB());
+      }
+    }
+
+    assertTrue(ThermalImageFireDetector.detect(image, 245).isEmpty());
+  }
+
+  @Test
   void ignoresBrightCameraOverlayTextAreas() {
     BufferedImage image = new BufferedImage(100, 80, BufferedImage.TYPE_INT_RGB);
     fill(image, new Color(35, 35, 35));

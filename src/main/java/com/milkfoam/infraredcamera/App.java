@@ -37,11 +37,12 @@ public final class App {
     int httpPort = Integer.parseInt(options.getOrDefault("http-port", "8765"));
     String cameraId = options.getOrDefault("camera-id", "cam-001");
     int channel = Integer.parseInt(options.getOrDefault("channel", "2"));
+    int fireBrightnessThreshold = Integer.parseInt(options.getOrDefault("fire-brightness-threshold", "245"));
 
     FireEventBus eventBus = new FireEventBus();
     FireSnapshotStore snapshotStore = new FireSnapshotStore();
     LiveFrameStore liveFrameStore = new LiveFrameStore();
-    FireEventSource source = createSource(mode, options, cameraId, channel, snapshotStore, liveFrameStore);
+    FireEventSource source = createSource(mode, options, cameraId, channel, fireBrightnessThreshold, snapshotStore, liveFrameStore);
     FireDetectionHttpServer httpServer = new FireDetectionHttpServer(eventBus, snapshotStore, liveFrameStore, httpPort);
     ThingsBoardTelemetryClient thingsBoardClient = new ThingsBoardTelemetryClient(new ThingsBoardConfig(
         options.get("thingsboard-host"),
@@ -115,6 +116,7 @@ public final class App {
       Map<String, String> options,
       String cameraId,
       int channel,
+      int fireBrightnessThreshold,
       FireSnapshotStore snapshotStore,
       LiveFrameStore liveFrameStore) {
     if ("hikvision".equalsIgnoreCase(mode)) {
@@ -126,7 +128,7 @@ public final class App {
           required(options, "password"),
           channel,
           options.get("sdk-lib"));
-      return new HikvisionFireEventSource(config, snapshotStore, liveFrameStore);
+      return new HikvisionFireEventSource(config, snapshotStore, liveFrameStore, fireBrightnessThreshold);
     }
     if (!"mock".equalsIgnoreCase(mode)) {
       throw new IllegalArgumentException("unsupported mode: " + mode + ", expected mock or hikvision");

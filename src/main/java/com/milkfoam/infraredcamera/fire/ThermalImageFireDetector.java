@@ -20,6 +20,10 @@ public final class ThermalImageFireDetector {
   }
 
   public static Optional<DetectedFire> detect(byte[] imageBytes) {
+    return detect(imageBytes, MIN_BRIGHTNESS);
+  }
+
+  public static Optional<DetectedFire> detect(byte[] imageBytes, int minBrightness) {
     BufferedImage image;
     try {
       image = ImageIO.read(new ByteArrayInputStream(imageBytes));
@@ -29,10 +33,14 @@ public final class ThermalImageFireDetector {
     if (image == null || image.getWidth() <= 0 || image.getHeight() <= 0) {
       return Optional.empty();
     }
-    return detect(image);
+    return detect(image, minBrightness);
   }
 
   static Optional<DetectedFire> detect(BufferedImage image) {
+    return detect(image, MIN_BRIGHTNESS);
+  }
+
+  static Optional<DetectedFire> detect(BufferedImage image, int minBrightness) {
     int width = image.getWidth();
     int height = image.getHeight();
     int[] luminance = new int[width * height];
@@ -70,8 +78,8 @@ public final class ThermalImageFireDetector {
     }
 
     double average = sum / (double) validPixelCount;
-    int threshold = (int) Math.max(MIN_BRIGHTNESS, average + (max - average) * THRESHOLD_RATIO);
-    if (max < MIN_BRIGHTNESS) {
+    int threshold = (int) Math.max(minBrightness, average + (max - average) * THRESHOLD_RATIO);
+    if (max < minBrightness) {
       return Optional.empty();
     }
 

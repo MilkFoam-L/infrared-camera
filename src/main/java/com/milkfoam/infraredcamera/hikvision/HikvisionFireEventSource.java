@@ -22,6 +22,7 @@ public final class HikvisionFireEventSource implements FireEventSource {
   private final HikvisionClientConfig config;
   private final FireSnapshotStore snapshotStore;
   private final LiveFrameStore liveFrameStore;
+  private final int minFireBrightness;
   private final HCNetSdkLibrary sdk;
   private final AtomicInteger localDetectionSequence = new AtomicInteger();
   private final ExecutorService callbackExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -40,7 +41,15 @@ public final class HikvisionFireEventSource implements FireEventSource {
       HikvisionClientConfig config,
       FireSnapshotStore snapshotStore,
       LiveFrameStore liveFrameStore) {
-    this(config, snapshotStore, liveFrameStore, HCNetSdkLibrary.load(config.sdkLibraryPath()));
+    this(config, snapshotStore, liveFrameStore, 170);
+  }
+
+  public HikvisionFireEventSource(
+      HikvisionClientConfig config,
+      FireSnapshotStore snapshotStore,
+      LiveFrameStore liveFrameStore,
+      int minFireBrightness) {
+    this(config, snapshotStore, liveFrameStore, minFireBrightness, HCNetSdkLibrary.load(config.sdkLibraryPath()));
   }
 
   HikvisionFireEventSource(
@@ -48,9 +57,22 @@ public final class HikvisionFireEventSource implements FireEventSource {
       FireSnapshotStore snapshotStore,
       LiveFrameStore liveFrameStore,
       HCNetSdkLibrary sdk) {
+    this(config, snapshotStore, liveFrameStore, 170, sdk);
+  }
+
+  HikvisionFireEventSource(
+      HikvisionClientConfig config,
+      FireSnapshotStore snapshotStore,
+      LiveFrameStore liveFrameStore,
+      int minFireBrightness,
+      HCNetSdkLibrary sdk) {
     this.config = Objects.requireNonNull(config, "config");
     this.snapshotStore = Objects.requireNonNull(snapshotStore, "snapshotStore");
     this.liveFrameStore = Objects.requireNonNull(liveFrameStore, "liveFrameStore");
+    if (minFireBrightness < 0 || minFireBrightness > 255) {
+      throw new IllegalArgumentException("minFireBrightness must be between 0 and 255");
+    }
+    this.minFireBrightness = minFireBrightness;
     this.sdk = Objects.requireNonNull(sdk, "sdk");
   }
 
@@ -76,6 +98,7 @@ public final class HikvisionFireEventSource implements FireEventSource {
     }
 
     queryThermalCapabilities();
+    System.out.println("本地火点亮度阈值：" + minFireBrightness + "，低于该阈值不会触发红色标注和 ThingsBoard 上报");
     callback = (lCommand, pAlarmer, pAlarmInfo, dwBufLen, pUser) -> {
       if (lCommand == HCNetSdkLibrary.COMM_FIREDETECTION_ALARM) {
         System.out.println("收到摄像头内置火点报警但已忽略：当前使用本地热成像画面检测逻辑");
@@ -100,7 +123,8 @@ public final class HikvisionFireEventSource implements FireEventSource {
         userId,
         config.thermalChannel(),
         liveFrameStore,
-        detection -> callbackExecutor.execute(() -> eventConsumer.accept(toLocalDetectionEvent(detection))));
+        detection -> callbackExecutor.execute(() -> eventConsumer.accept(toLocalDetectionEvent(detection))),
+        minFireBrightness);
     snapshotClient.start();
     thermometryClient = new HikvisionRealtimeThermometryClient(sdk, userId);
     thermometryClient.start(config.thermalChannel(), 0, measurement -> {

@@ -520,3 +520,28 @@
 - `docs/thermal-fire-detection-plan.md`：补充 OSD 区域排除说明。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：可执行本轮提交的 `git revert` 回滚；或恢复上述文件和 Jar 到上一提交版本。
+
+## 2026-06-26 - Task: 增加火点亮度阈值过滤人体热源
+
+### What was done
+- 增加可配置的火点亮度阈值，只有热源最高亮度达到阈值后才会生成火点事件、显示红色像素标注并上报 ThingsBoard。
+- 在真实设备启动脚本顶部新增 `FIRE_BRIGHTNESS_THRESHOLD`，默认设置为 `245`，便于现场根据误报情况调整。
+- 后端本地热成像检测支持按传入阈值过滤低亮度热源，减少人体热源误触发。
+- 新增单元测试覆盖低于配置阈值的人体类热源区域不触发火点。
+- 更新实施文档，说明阈值配置和触发语义。
+
+### Testing
+- 首次执行 `mvn package` 失败，原因是旧构造函数转发时把缓冲区大小误传为亮度阈值；已修复构造函数转发。
+- 复测执行 `mvn package` 通过：测试 31 个全部通过，并成功重新生成 `target/infrared-camera-1.0.0.jar`。
+
+### Notes
+- `src/main/java/com/milkfoam/infraredcamera/fire/ThermalImageFireDetector.java`：新增可传入最小亮度阈值的检测入口。
+- `src/main/java/com/milkfoam/infraredcamera/hikvision/HikvisionThermalSnapshotClient.java`：抓图检测时使用配置阈值。
+- `src/main/java/com/milkfoam/infraredcamera/hikvision/HikvisionFireEventSource.java`：传递并打印当前火点亮度阈值。
+- `src/main/java/com/milkfoam/infraredcamera/App.java`：新增 `--fire-brightness-threshold` 启动参数。
+- `start-hikvision-fire-detection.bat`：新增 `FIRE_BRIGHTNESS_THRESHOLD=245` 配置并传给 Java 程序。
+- `src/test/java/com/milkfoam/infraredcamera/fire/ThermalImageFireDetectorTest.java`：新增低于阈值不触发火点的测试。
+- `target/infrared-camera-1.0.0.jar`：更新为包含亮度阈值过滤的新可执行包。
+- `docs/thermal-fire-detection-plan.md`：补充阈值配置说明。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：可执行本轮提交的 `git revert` 回滚；或恢复上述文件和 Jar 到上一提交版本。
