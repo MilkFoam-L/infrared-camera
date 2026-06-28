@@ -635,3 +635,43 @@
 - `target/infrared-camera-1.0.0.jar`：重新打包后的服务器运行包。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：使用 `git revert <本次提交>` 回滚本轮诊断日志和竖线过滤阈值改动；或恢复上述文件到本轮修改前版本后重新执行 `mvn test && mvn package`。
+
+## 2026-06-28 - Task: 修正网页按钮为显示实际红色像素触发值
+
+### What was done
+- 重新审查右上角测试按钮语义，将按钮从显示固定判定阈值改为显示当前实际红色像素中的触发亮度值。
+- 前端在绘制红色像素时统计实际标红像素数量、最低触发亮度、最高触发亮度，并在按钮点击时展示这些值。
+- 保留判定阈值作为对照，便于判断现场红色像素离当前阈值有多近。
+- 没有实际标红像素时，按钮会提示当前画面没有实际标红的像素。
+- 更新实施文档，并重新打包可执行 Jar。
+
+### Testing
+- 已执行 `mvn package`，结果通过：33 个测试全部通过，0 失败，0 错误，0 跳过，并成功重新生成 `target/infrared-camera-1.0.0.jar`。
+
+### Notes
+- `src/main/resources/web/index.html`：将按钮文案改为“显示红色像素值”。
+- `src/main/resources/web/app.js`：新增红色像素统计信息，按钮显示最低触发亮度、最高亮度、红色像素数和判定阈值。
+- `docs/thermal-fire-detection-plan.md`：补充按钮显示实际红色像素值的说明。
+- `target/infrared-camera-1.0.0.jar`：重新打包后的服务器运行包。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：使用 `git revert <本次提交>` 回滚本轮按钮语义修正；或恢复上述文件到本轮修改前版本后重新执行 `mvn package`。
+
+## 2026-06-28 - Task: 将红色像素值提示移动到标红区域附近
+
+### What was done
+- 保留右上角“显示红色像素值”按钮作为触发开关，但不再把结果固定显示在右上角。
+- 前端绘制红色像素时同步统计实际标红像素边界，并根据边界把触发值提示放到红色像素区域旁边。
+- 提示内容继续显示最低触发亮度、最高亮度、红色像素数和判定阈值。
+- 红色像素清除后，同步隐藏触发值提示，避免旧提示停留在画面上。
+- 更新实施文档，并重新打包可执行 Jar。
+
+### Testing
+- 已执行 `mvn package`，结果通过：33 个测试全部通过，0 失败，0 错误，0 跳过，并成功重新生成 `target/infrared-camera-1.0.0.jar`。
+
+### Notes
+- `src/main/resources/web/app.js`：新增红色像素边界统计和提示框跟随定位逻辑。
+- `src/main/resources/web/style.css`：调整触发值提示框为可动态定位的样式。
+- `docs/thermal-fire-detection-plan.md`：更新按钮会在红色像素区域附近显示实际触发值的说明。
+- `target/infrared-camera-1.0.0.jar`：重新打包后的服务器运行包。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：使用 `git revert <本次提交>` 回滚本轮提示定位改动；或恢复上述文件到本轮修改前版本后重新执行 `mvn package`。
