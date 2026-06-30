@@ -102,6 +102,10 @@ public final class HikvisionFireEventSource implements FireEventSource {
         FireDetectionEvent event = mapAlarm(pAlarmInfo);
         callbackExecutor.execute(() -> eventConsumer.accept(event));
       }
+      if (lCommand == HCNetSdkLibrary.COMM_THERMOMETRY_ALARM) {
+        FireDetectionEvent event = mapThermometryAlarm(pAlarmInfo);
+        callbackExecutor.execute(() -> eventConsumer.accept(event));
+      }
     };
 
     if (!sdk.NET_DVR_SetDVRMessageCallBack_V50(0, callback, Pointer.NULL)) {
@@ -187,9 +191,11 @@ public final class HikvisionFireEventSource implements FireEventSource {
   }
 
   private void logSdkAlarm(int lCommand, Pointer pAlarmInfo, int dwBufLen) {
-    String commandName = lCommand == HCNetSdkLibrary.COMM_FIREDETECTION_ALARM
-        ? "COMM_FIREDETECTION_ALARM"
-        : "UNKNOWN_SDK_ALARM";
+    String commandName = switch (lCommand) {
+      case HCNetSdkLibrary.COMM_FIREDETECTION_ALARM -> "COMM_FIREDETECTION_ALARM";
+      case HCNetSdkLibrary.COMM_THERMOMETRY_ALARM -> "COMM_THERMOMETRY_ALARM";
+      default -> "UNKNOWN_SDK_ALARM";
+    };
     System.out.println("收到海康 SDK 报警事件：lCommand=" + lCommand
         + "，hex=0x" + Integer.toHexString(lCommand).toUpperCase(Locale.ROOT)
         + "，名称=" + commandName
@@ -211,6 +217,68 @@ public final class HikvisionFireEventSource implements FireEventSource {
       builder.append(String.format(Locale.ROOT, "%02X", Byte.toUnsignedInt(bytes[i])));
     }
     return builder.toString();
+  }
+
+  private FireDetectionEvent mapThermometryAlarm(Pointer pAlarmInfo) {
+    HCNetSdkLibrary.NET_DVR_THERMOMETRY_ALARM alarm =
+        new HCNetSdkLibrary.NET_DVR_THERMOMETRY_ALARM(pAlarmInfo);
+    double pointX = normalize(alarm.struHighestPoint.fX, 0.5);
+    double pointY = normalize(alarm.struHighestPoint.fY, 0.5);
+    double minX = pointX;
+    double minY = pointY;
+    double maxX = pointX;
+    double maxY = pointY;
+    if (alarm.byRuleCalibType != 0 && alarm.struRegion.dwPointNum > 0) {
+      int pointCount = Math.min(alarm.struRegion.dwPointNum, alarm.struRegion.struPos.length);
+      for (int i = 0; i < pointCount; i++) {
+        double x = normalize(alarm.struRegion.struPos[i].fX, pointX);
+        double y = normalize(alarm.struRegion.struPos[i].fY, pointY);
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+    double width = Math.max(0.01, maxX - minX);
+    double height = Math.max(0.01, maxY - minY);
+    if (minX + width > 1.0) {
+      minX = 1.0 - width;
+    }
+    if (minY + height > 1.0) {
+      minY = 1.0 - height;
+    }
+
+    String eventId = String.format(Locale.ROOT, "thermometry-%s-%d-%d",
+        config.cameraId(), alarm.dwChannel, System.currentTimeMillis());
+    System.out.println("测温报警触发上报：事件ID=" + eventId
+        + "，通道=" + alarm.dwChannel
+        + "，规则ID=" + Byte.toUnsignedInt(alarm.byRuleID)
+        + "，当前温度=" + String.format(Locale.ROOT, "%.1f", alarm.fCurrTemperature)
+        + "，规则温度=" + String.format(Locale.ROOT, "%.1f", alarm.fRuleTemperature)
+        + "，报警等级=" + Byte.toUnsignedInt(alarm.byAlarmLevel)
+        + "，报警类型=" + Byte.toUnsignedInt(alarm.byAlarmType));
+    saveThermometrySnapshot(eventId, alarm);
+    return new FireDetectionEvent(
+        eventId,
+        config.cameraId(),
+        alarm.dwChannel > 0 ? alarm.dwChannel : config.thermalChannel(),
+        config.host(),
+        "thermometry_alarm",
+        java.time.OffsetDateTime.now(),
+        alarm.fCurrTemperature,
+        0.0,
+        new com.milkfoam.infraredcamera.fire.NormalizedRect(minX, minY, width, height),
+        new com.milkfoam.infraredcamera.fire.NormalizedPoint(pointX, pointY),
+        0,
+        "/api/fire-events/" + eventId + "/snapshot",
+        "COMM_THERMOMETRY_ALARM");
+  }
+
+  private double normalize(double value, double fallback) {
+    if (Double.isNaN(value)) {
+      return fallback;
+    }
+    return Math.max(0.0, Math.min(1.0, value));
   }
 
   private FireDetectionEvent mapAlarm(Pointer pAlarmInfo) {
@@ -243,6 +311,16 @@ public final class HikvisionFireEventSource implements FireEventSource {
         config.cameraId(), raw, ZoneOffset.systemDefault().getRules().getOffset(java.time.Instant.now()));
     saveThermalSnapshot(event.eventId(), alarm);
     return event;
+  }
+
+  private void saveThermometrySnapshot(String eventId, HCNetSdkLibrary.NET_DVR_THERMOMETRY_ALARM alarm) {
+    if (alarm.dwThermalPicLen > 0 && alarm.pThermalPicBuff != null) {
+      snapshotStore.save(eventId, "image/jpeg", alarm.pThermalPicBuff.getByteArray(0, alarm.dwThermalPicLen));
+      return;
+    }
+    if (alarm.dwPicLen > 0 && alarm.pPicBuff != null) {
+      snapshotStore.save(eventId, "image/jpeg", alarm.pPicBuff.getByteArray(0, alarm.dwPicLen));
+    }
   }
 
   private void saveThermalSnapshot(String eventId, HCNetSdkLibrary.NET_DVR_FIREDETECTION_ALARM alarm) {

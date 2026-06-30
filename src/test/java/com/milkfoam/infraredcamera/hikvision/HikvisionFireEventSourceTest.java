@@ -61,6 +61,33 @@ class HikvisionFireEventSourceTest {
   }
 
   @Test
+  void dispatchesSdkThermometryAlarm() throws InterruptedException {
+    FakeSdk sdk = new FakeSdk();
+    HikvisionFireEventSource source = new HikvisionFireEventSource(config(), new FireSnapshotStore(), new LiveFrameStore(), sdk);
+    List<FireDetectionEvent> events = new ArrayList<>();
+    CountDownLatch delivered = new CountDownLatch(1);
+    source.start(event -> {
+      events.add(event);
+      delivered.countDown();
+    });
+
+    Pointer alarmPointer = thermometryAlarmPointer();
+    sdk.fireAlarmCallback.invoke(
+        HCNetSdkLibrary.COMM_THERMOMETRY_ALARM,
+        new HCNetSdkLibrary.NET_DVR_ALARMER(),
+        alarmPointer,
+        new HCNetSdkLibrary.NET_DVR_THERMOMETRY_ALARM(alarmPointer).size(),
+        Pointer.NULL);
+
+    assertTrue(delivered.await(1, TimeUnit.SECONDS));
+    assertEquals(1, events.size());
+    assertEquals("thermometry_alarm", events.get(0).eventType());
+    assertEquals("COMM_THERMOMETRY_ALARM", events.get(0).rawCommand());
+    assertEquals(55.8, events.get(0).maxTemperature(), 0.001);
+    assertEquals(2, events.get(0).channelId());
+  }
+
+  @Test
   void stopsRealtimeThermometryBeforeCleaningUpSdk() {
     FakeSdk sdk = new FakeSdk();
     LiveFrameStore liveFrameStore = new LiveFrameStore();
@@ -71,6 +98,34 @@ class HikvisionFireEventSourceTest {
 
     assertEquals(77, sdk.stoppedRemoteConfigHandle);
     assertTrue(sdk.cleanedUp);
+  }
+
+  private static Pointer thermometryAlarmPointer() {
+    HCNetSdkLibrary.NET_DVR_THERMOMETRY_ALARM alarm = new HCNetSdkLibrary.NET_DVR_THERMOMETRY_ALARM();
+    alarm.dwChannel = 2;
+    alarm.byRuleID = 1;
+    alarm.byThermometryUnit = 0;
+    alarm.byAlarmLevel = 1;
+    alarm.byAlarmType = 0;
+    alarm.byAlarmRule = 0;
+    alarm.byRuleCalibType = 1;
+    alarm.struRegion.dwPointNum = 4;
+    alarm.struRegion.struPos[0].fX = 0.4f;
+    alarm.struRegion.struPos[0].fY = 0.2f;
+    alarm.struRegion.struPos[1].fX = 0.5f;
+    alarm.struRegion.struPos[1].fY = 0.2f;
+    alarm.struRegion.struPos[2].fX = 0.5f;
+    alarm.struRegion.struPos[2].fY = 0.4f;
+    alarm.struRegion.struPos[3].fX = 0.4f;
+    alarm.struRegion.struPos[3].fY = 0.4f;
+    alarm.fRuleTemperature = 50.0f;
+    alarm.fCurrTemperature = 55.8f;
+    alarm.struHighestPoint.fX = 0.45f;
+    alarm.struHighestPoint.fY = 0.3f;
+    alarm.write();
+    Memory memory = new Memory(alarm.size());
+    memory.write(0, alarm.getPointer().getByteArray(0, alarm.size()), 0, alarm.size());
+    return memory;
   }
 
   private static Pointer fireAlarmPointer() {

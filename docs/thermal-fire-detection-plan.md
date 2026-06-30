@@ -250,13 +250,13 @@ java -jar target/infrared-camera-1.0.0.jar \
 - `start-hikvision-fire-detection.bat` 顶部的 `FIRE_BRIGHTNESS_THRESHOLD` 只在 `CUSTOM_FIRE_MASK=on` 时作为前端自绘红色像素的展示阈值，不再决定是否向 ThingsBoard 上报。
 - 页面主体始终展示 `/api/live-frame` 返回的热成像抓图；`CUSTOM_FIRE_MASK=off` 时若摄像头原始画面自带红点则直接显示原图中的红点；`CUSTOM_FIRE_MASK=on` 时只保留红色像素自绘层，不再显示右上角红色像素值按钮或触发值提示。
 - 当前抓图刷新为秒级刷新，不是 25fps 视频流；如需低延迟视频，后续需要单独接 RTSP 转 HLS/WebRTC。
-- 真实设备模式重新以海康 SDK 报警事件作为上报依据：收到 `COMM_FIREDETECTION_ALARM` 后转换为统一 `FireDetectionEvent`，推送网页并向 ThingsBoard 上报；热成像 JPEG 抓图只用于刷新 `/api/live-frame`，不再执行本地亮度检测，也不会生成 `LOCAL_THERMAL_FRAME_DETECTION` 上报事件。
+- 真实设备模式重新以海康 SDK 报警事件作为上报依据：收到 `COMM_FIREDETECTION_ALARM` 或 `COMM_THERMOMETRY_ALARM(0x5212)` 后转换为统一 `FireDetectionEvent`，推送网页并向 ThingsBoard 上报；热成像 JPEG 抓图只用于刷新 `/api/live-frame`，不再执行本地亮度检测，也不会生成 `LOCAL_THERMAL_FRAME_DETECTION` 上报事件。
 - SDK 回调会对所有报警事件输出通用诊断日志，包含 `lCommand`、十六进制事件号、数据长度和数据前缀；当前现场暂未确认测温报警事件号时，可用这些日志识别设备实际上传的报警类型。
 - 启动窗口会实时显示 Java 输出；程序每 5 秒输出一条中文火点检测状态日志；收到 SDK 报警时输出报警事件号和火点事件明细。
 - 控制台会输出中文 ThingsBoard 上传开关、目标地址、事件 ID、请求 JSON、响应状态码、响应体和异常栈，便于排查为什么未上传成功。
 - `thingsboard上报.txt` 是手工验证 ThingsBoard 链路的 Python 调试脚本，ThingsBoard 地址和设备访问令牌直接在文件顶部变量中配置，不读取电脑环境变量。
 - ThingsBoard 上报地址格式：`http://<thingsboard-host>/api/v1/<thingsboard-token>/telemetry`。
-- 上报基础字段包含 `warning_flag=1`、`warning_status=1`，同时附带摄像头、通道、设备 IP、事件 ID、最高温、距离、火点框坐标、最高温点、火点亮度阈值和事件时间。
+- ThingsBoard 上报体严格只包含 `warning_flag=1` 和 `warning_status=1` 两个字段，不附带摄像头、温度、坐标、事件 ID 或其他额外字段。
 - `--sdk-lib` 可传绝对路径，也可省略并让 JNA 从系统库路径查找。
 - Windows 使用 `HCNetSDK.dll`，Linux 使用 `libhcnetsdk.so`。
 - Linux 还需要按海康 Java 开发指南配置 `HCNetSDKCom`、`libcrypto.so`、`libssl.so` 等依赖库路径。

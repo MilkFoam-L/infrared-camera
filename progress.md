@@ -726,3 +726,28 @@
 - `docs/thermal-fire-detection-plan.md`：同步页面展示说明。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：恢复上述前端文件和文档到本轮修改前版本；若后续已提交，则使用 `git revert <本次提交>` 回滚。
+
+## 2026-06-30 - Task: 接入测温报警并精简 ThingsBoard 上报体
+
+### What was done
+- 根据现场日志确认海康 SDK 已收到 `lCommand=21010`、`hex=0x5212` 的测温报警事件。
+- 新增 `COMM_THERMOMETRY_ALARM(0x5212)` 常量和 `NET_DVR_THERMOMETRY_ALARM` 结构体映射。
+- 将测温报警转换为统一火点事件，进入现有网页推送和 ThingsBoard 上报流程。
+- 将 ThingsBoard 上报体严格改为只包含 `warning_flag=1` 和 `warning_status=1`，不再附带摄像头、温度、坐标、事件 ID 或其他字段。
+- 重新生成 Java 17 兼容的可执行 Jar。
+
+### Testing
+- 已用 Java 17 目标版本手动构建 `target/infrared-camera-1.0.0.jar`，并确认 `App.class major_version=61`。
+- 已更新单元测试期望：测温报警会分发为 `thermometry_alarm` 事件；ThingsBoard JSON 严格等于 `{\"warning_flag\":\"1\",\"warning_status\":\"1\"}`。
+- 本轮未执行 Maven 测试，原因是当前环境中 `mvn` 命令不可用。
+
+### Notes
+- `src/main/java/com/milkfoam/infraredcamera/hikvision/HCNetSdkLibrary.java`：新增测温报警常量和结构体。
+- `src/main/java/com/milkfoam/infraredcamera/hikvision/HikvisionFireEventSource.java`：新增 `COMM_THERMOMETRY_ALARM` 分发、测温报警事件映射和测温报警截图保存。
+- `src/main/java/com/milkfoam/infraredcamera/thingsboard/ThingsBoardTelemetryClient.java`：上报 JSON 精简为两个固定字段。
+- `src/test/java/com/milkfoam/infraredcamera/hikvision/HikvisionFireEventSourceTest.java`：新增测温报警分发测试。
+- `src/test/java/com/milkfoam/infraredcamera/thingsboard/ThingsBoardTelemetryClientTest.java`：更新上报 JSON 严格格式测试。
+- `docs/thermal-fire-detection-plan.md`：同步测温报警和严格上报格式说明。
+- `target/infrared-camera-1.0.0.jar`：重新构建后的 Java 17 兼容运行包。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：恢复上述文件和 Jar 到本轮修改前版本；若后续已提交，则使用 `git revert <本次提交>` 回滚。

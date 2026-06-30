@@ -29,7 +29,7 @@ class ThingsBoardTelemetryClientTest {
   }
 
   @Test
-  void telemetryJsonContainsWarningFlagAndFireFields() {
+  void telemetryJsonOnlyContainsWarningFlagAndStatus() {
     FireDetectionEvent event = new FireDetectionEvent(
         "fire-001",
         "hm-tcq203-s",
@@ -47,17 +47,6 @@ class ThingsBoardTelemetryClientTest {
 
     String json = ThingsBoardTelemetryClient.telemetryJson(event);
 
-    assertTrue(json.contains("\"warning_flag\":\"1\""));
-    assertTrue(json.contains("\"warning_status\":\"1\""));
-    assertTrue(json.contains("\"camera_id\":\"hm-tcq203-s\""));
-    assertTrue(json.contains("\"channel_id\":2"));
-    assertTrue(json.contains("\"device_ip\":\"192.168.1.64\""));
-    assertTrue(json.contains("\"event_id\":\"fire-001\""));
-    assertTrue(json.contains("\"max_temperature\":86.500000"));
-    assertTrue(json.contains("\"target_distance\":12.250000"));
-    assertTrue(json.contains("\"fire_x\":0.100000"));
-    assertTrue(json.contains("\"highest_y\":0.350000"));
-    assertTrue(json.contains("\"fire_brightness_threshold\":245"));
-    assertTrue(json.contains("\"event_time\":\"2026-06-23T09:30:00+08:00\""));
+    assertEquals("{\"warning_flag\":\"1\",\"warning_status\":\"1\"}", json);
   }
 }

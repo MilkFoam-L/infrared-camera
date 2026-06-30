@@ -7,8 +7,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -52,23 +50,10 @@ public final class ThingsBoardTelemetryClient implements AutoCloseable {
   }
 
   static String telemetryJson(FireDetectionEvent event) {
+    Objects.requireNonNull(event, "event");
     return "{"
         + json("warning_flag", "1") + ","
-        + json("warning_status", "1") + ","
-        + json("camera_id", event.cameraId()) + ","
-        + number("channel_id", event.channelId()) + ","
-        + json("device_ip", event.deviceIp()) + ","
-        + json("event_id", event.eventId()) + ","
-        + number("max_temperature", event.maxTemperature()) + ","
-        + number("target_distance", event.targetDistance()) + ","
-        + number("fire_x", event.rect().x()) + ","
-        + number("fire_y", event.rect().y()) + ","
-        + number("fire_width", event.rect().width()) + ","
-        + number("fire_height", event.rect().height()) + ","
-        + number("highest_x", event.highestPoint().x()) + ","
-        + number("highest_y", event.highestPoint().y()) + ","
-        + number("fire_brightness_threshold", event.fireBrightnessThreshold()) + ","
-        + json("event_time", event.eventTime().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+        + json("warning_status", "1")
         + "}";
   }
 
@@ -102,13 +87,6 @@ public final class ThingsBoardTelemetryClient implements AutoCloseable {
     return "\"" + name + "\":\"" + escape(value) + "\"";
   }
 
-  private static String number(String name, int value) {
-    return "\"" + name + "\":" + value;
-  }
-
-  private static String number(String name, double value) {
-    return "\"" + name + "\":" + String.format(Locale.ROOT, "%.6f", value);
-  }
 
   private static String escape(String value) {
     return value

@@ -12,6 +12,7 @@ import java.util.List;
 public interface HCNetSdkLibrary extends Library {
 
   int COMM_FIREDETECTION_ALARM = 0x4991;
+  int COMM_THERMOMETRY_ALARM = 0x5212;
   int NET_DVR_GET_REALTIME_THERMOMETRY = 3629;
   int NET_SDK_CALLBACK_TYPE_DATA = 2;
   int NET_DVR_DEV_ADDRESS_MAX_LEN = 129;
@@ -565,6 +566,73 @@ public interface HCNetSdkLibrary extends Library {
     @Override
     protected List<String> getFieldOrder() {
       return Arrays.asList("dwSize", "dwChan", "byRuleID", "byMode", "wInterval", "fTemperatureDiff", "byRes");
+    }
+  }
+
+  final class NET_DVR_THERMOMETRY_ALARM extends Structure {
+    public int dwSize;
+    public int dwChannel;
+    public byte byRuleID;
+    public byte byThermometryUnit;
+    public short wPresetNo;
+    public NET_PTZ_INFO struPtzInfo = new NET_PTZ_INFO();
+    public byte byAlarmLevel;
+    public byte byAlarmType;
+    public byte byAlarmRule;
+    public byte byRuleCalibType;
+    public NET_VCA_POINT struPoint = new NET_VCA_POINT();
+    public NET_VCA_POLYGON struRegion = new NET_VCA_POLYGON();
+    public float fRuleTemperature;
+    public float fCurrTemperature;
+    public int dwPicLen;
+    public int dwThermalPicLen;
+    public int dwThermalInfoLen;
+    public Pointer pPicBuff;
+    public Pointer pThermalPicBuff;
+    public Pointer pThermalInfoBuff;
+    public NET_VCA_POINT struHighestPoint = new NET_VCA_POINT();
+    public byte fToleranceTemperature;
+    public byte dwAlertFilteringTime;
+    public byte dwAlarmFilteringTime;
+    public byte[] byRes = new byte[48];
+
+    public NET_DVR_THERMOMETRY_ALARM() {
+      dwSize = size();
+    }
+
+    public NET_DVR_THERMOMETRY_ALARM(Pointer pointer) {
+      super(pointer);
+      read();
+    }
+
+    @Override
+    protected List<String> getFieldOrder() {
+      return Arrays.asList(
+          "dwSize",
+          "dwChannel",
+          "byRuleID",
+          "byThermometryUnit",
+          "wPresetNo",
+          "struPtzInfo",
+          "byAlarmLevel",
+          "byAlarmType",
+          "byAlarmRule",
+          "byRuleCalibType",
+          "struPoint",
+          "struRegion",
+          "fRuleTemperature",
+          "fCurrTemperature",
+          "dwPicLen",
+          "dwThermalPicLen",
+          "dwThermalInfoLen",
+          "pPicBuff",
+          "pThermalPicBuff",
+          "pThermalInfoBuff",
+          "struHighestPoint",
+          "fToleranceTemperature",
+          "dwAlertFilteringTime",
+          "dwAlarmFilteringTime",
+          "byRes");
     }
   }
 
