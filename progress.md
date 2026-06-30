@@ -706,3 +706,23 @@
 - `docs/thermal-fire-detection-plan.md`：同步真实设备运行逻辑、开关说明、通用 SDK 报警日志和验收项。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：使用 `git diff` 确认本轮改动后，恢复上述文件到本轮修改前版本；若后续已提交，则使用 `git revert <本次提交>` 回滚。
+
+## 2026-06-30 - Task: 删除网页红色像素值按钮
+
+### What was done
+- 删除热成像网页右上角“显示红色像素值”按钮。
+- 删除红色像素触发值提示框及对应的前端统计、点击和展示逻辑。
+- 保留红色像素自绘层开关本身，`CUSTOM_FIRE_MASK=off` 仍只显示摄像头原始画面，`CUSTOM_FIRE_MASK=on` 仍可自绘红色像素但不再展示像素值。
+- 更新实施文档，说明页面不再显示右上角红色像素值按钮或触发值提示。
+
+### Testing
+- 已执行前端资源搜索，确认 `thresholdTestButton`、`thresholdStatus`、`红色像素值`、`latestMaskStats` 和触发值统计变量在网页资源中无残留。
+- 本轮未执行 Maven 测试，原因是当前环境中 `mvn` 命令不可用；改动范围为静态前端资源和文档。
+
+### Notes
+- `src/main/resources/web/index.html`：删除红色像素值按钮和提示框 DOM。
+- `src/main/resources/web/app.js`：删除按钮引用、点击事件、触发值统计和提示展示逻辑。
+- `src/main/resources/web/style.css`：删除按钮和提示框样式。
+- `docs/thermal-fire-detection-plan.md`：同步页面展示说明。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：恢复上述前端文件和文档到本轮修改前版本；若后续已提交，则使用 `git revert <本次提交>` 回滚。

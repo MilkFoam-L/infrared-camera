@@ -1,8 +1,6 @@
 const liveFrame = document.getElementById('liveFrame');
 const frameStatus = document.getElementById('frameStatus');
 const fireMask = document.getElementById('fireMask');
-const thresholdTestButton = document.getElementById('thresholdTestButton');
-const thresholdStatus = document.getElementById('thresholdStatus');
 const fireMaskContext = fireMask.getContext('2d', { willReadFrequently: true });
 const sourceCanvas = document.createElement('canvas');
 const sourceContext = sourceCanvas.getContext('2d', { willReadFrequently: true });
@@ -12,7 +10,6 @@ const BOTTOM_OSD_IGNORE_TOP_RATIO = 0.82;
 const BOTTOM_OSD_IGNORE_LEFT_RATIO = 0.66;
 
 let latestEvent = null;
-let latestMaskStats = null;
 let fadeTimer = null;
 let clearTimer = null;
 let customFireMaskEnabled = true;
@@ -93,33 +90,12 @@ function drawFireMask(event) {
   }
   const mask = fireMaskContext.createImageData(width, height);
   const maskData = mask.data;
-  const stats = {
-    threshold,
-    redPixelCount: 0,
-    minTriggeredBrightness: 256,
-    maxTriggeredBrightness: 0,
-    minRedX: width,
-    minRedY: height,
-    maxRedX: 0,
-    maxRedY: 0,
-    labelLeft: 0,
-    labelTop: 0,
-  };
-
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const p = y * width + x;
       if (isIgnoredOsdArea(left + x, top + y, imageWidth, imageHeight) || luminance[p] < threshold) {
         continue;
       }
-
-      stats.redPixelCount += 1;
-      stats.minTriggeredBrightness = Math.min(stats.minTriggeredBrightness, luminance[p]);
-      stats.maxTriggeredBrightness = Math.max(stats.maxTriggeredBrightness, luminance[p]);
-      stats.minRedX = Math.min(stats.minRedX, x);
-      stats.minRedY = Math.min(stats.minRedY, y);
-      stats.maxRedX = Math.max(stats.maxRedX, x);
-      stats.maxRedY = Math.max(stats.maxRedY, y);
 
       const target = p * 4;
       maskData[target] = 220;
@@ -134,16 +110,6 @@ function drawFireMask(event) {
   const targetTop = frame.top + (top / imageHeight) * frame.height;
   const targetWidth = (width / imageWidth) * frame.width;
   const targetHeight = (height / imageHeight) * frame.height;
-  if (stats.redPixelCount > 0) {
-    const redRight = targetLeft + ((stats.maxRedX + 1) / width) * targetWidth;
-    const redTop = targetTop + (stats.minRedY / height) * targetHeight;
-    stats.labelLeft = clamp(redRight + 8, 8, Math.max(8, fireMask.width - 280));
-    stats.labelTop = clamp(redTop, 8, Math.max(8, fireMask.height - 90));
-    latestMaskStats = stats;
-  } else {
-    latestMaskStats = null;
-  }
-
   fireMaskContext.clearRect(0, 0, fireMask.width, fireMask.height);
   const maskCanvas = document.createElement('canvas');
   maskCanvas.width = width;
@@ -159,58 +125,8 @@ function clearFireMask() {
   window.clearTimeout(clearTimer);
   resizeMask();
   fireMaskContext.clearRect(0, 0, fireMask.width, fireMask.height);
-  latestMaskStats = null;
-  thresholdStatus.classList.add('hidden');
   fireMask.classList.add('hidden');
   fireMask.classList.remove('fading');
-}
-
-function thresholdMessage(event) {
-  if (!event) {
-    return '当前还没有火点事件，暂时没有红色像素。';
-  }
-  if (!latestMaskStats) {
-    return '当前画面没有实际标红的像素，无法显示触发值。';
-  }
-  return `当前红色像素触发值：最低亮度 ${latestMaskStats.minTriggeredBrightness}，最高亮度 ${latestMaskStats.maxTriggeredBrightness}，红色像素数 ${latestMaskStats.redPixelCount}，判定阈值 ${latestMaskStats.threshold}`;
-}
-
-function showThresholdStatus(message, stats) {
-  thresholdStatus.textContent = message;
-  if (stats) {
-    thresholdStatus.style.left = `${stats.labelLeft}px`;
-    thresholdStatus.style.top = `${stats.labelTop}px`;
-  } else {
-    thresholdStatus.style.left = '18px';
-    thresholdStatus.style.top = '64px';
-  }
-  thresholdStatus.classList.remove('hidden');
-}
-
-async function showCurrentThreshold() {
-  if (!customFireMaskEnabled) {
-    return;
-  }
-  if (latestEvent) {
-    drawFireMask(latestEvent);
-    showThresholdStatus(thresholdMessage(latestEvent), latestMaskStats);
-    return;
-  }
-
-  showThresholdStatus('正在读取最新红色像素触发值...');
-  try {
-    const response = await fetch('/api/fire-events/latest');
-    const payload = await response.json();
-    if (payload.fireDetected) {
-      latestEvent = payload.event;
-      drawFireMask(latestEvent);
-      showThresholdStatus(thresholdMessage(latestEvent), latestMaskStats);
-      return;
-    }
-    showThresholdStatus('当前还没有火点事件，暂时没有红色像素触发值。');
-  } catch (error) {
-    showThresholdStatus('读取阈值失败，请确认服务正在运行。');
-  }
 }
 
 function renderEvent(event) {
@@ -245,15 +161,9 @@ async function loadRuntimeConfig() {
     customFireMaskEnabled = true;
   }
 
-  if (customFireMaskEnabled) {
-    thresholdTestButton.disabled = false;
-    thresholdTestButton.classList.remove('hidden');
-    return;
+  if (!customFireMaskEnabled) {
+    clearFireMask();
   }
-
-  thresholdTestButton.disabled = true;
-  thresholdTestButton.classList.add('hidden');
-  clearFireMask();
 }
 
 async function loadLatest() {
@@ -274,10 +184,6 @@ liveFrame.addEventListener('load', () => {
 liveFrame.addEventListener('error', () => {
   frameStatus.textContent = '热成像画面加载失败，正在重试...';
   frameStatus.classList.remove('hidden');
-});
-
-thresholdTestButton.addEventListener('click', () => {
-  showCurrentThreshold();
 });
 
 window.addEventListener('resize', () => {

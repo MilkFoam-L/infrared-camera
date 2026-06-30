@@ -248,7 +248,7 @@ java -jar target/infrared-camera-1.0.0.jar \
 - 服务器只需 `git pull` 获取最新代码、`target/infrared-camera-1.0.0.jar` 和 `EN-HCNetSDKV6.1.9.4_build20220412_win64/lib/`，无需先安装 Maven 打包或手动拷贝 SDK 即可运行脚本。
 - `start-hikvision-fire-detection.bat` 顶部的 `CUSTOM_FIRE_MASK` 控制前端是否自绘红色像素：`off` 表示关闭自绘层、只看摄像头原始画面；`on` 表示保留自绘红色像素层。
 - `start-hikvision-fire-detection.bat` 顶部的 `FIRE_BRIGHTNESS_THRESHOLD` 只在 `CUSTOM_FIRE_MASK=on` 时作为前端自绘红色像素的展示阈值，不再决定是否向 ThingsBoard 上报。
-- 页面主体始终展示 `/api/live-frame` 返回的热成像抓图；`CUSTOM_FIRE_MASK=off` 时右上角“显示红色像素值”按钮隐藏，若摄像头原始画面自带红点则直接显示原图中的红点；`CUSTOM_FIRE_MASK=on` 时按钮会在当前红色像素区域附近展示实际标红像素中的最低亮度、最高亮度、红色像素数量，并附带判定阈值作对照。
+- 页面主体始终展示 `/api/live-frame` 返回的热成像抓图；`CUSTOM_FIRE_MASK=off` 时若摄像头原始画面自带红点则直接显示原图中的红点；`CUSTOM_FIRE_MASK=on` 时只保留红色像素自绘层，不再显示右上角红色像素值按钮或触发值提示。
 - 当前抓图刷新为秒级刷新，不是 25fps 视频流；如需低延迟视频，后续需要单独接 RTSP 转 HLS/WebRTC。
 - 真实设备模式重新以海康 SDK 报警事件作为上报依据：收到 `COMM_FIREDETECTION_ALARM` 后转换为统一 `FireDetectionEvent`，推送网页并向 ThingsBoard 上报；热成像 JPEG 抓图只用于刷新 `/api/live-frame`，不再执行本地亮度检测，也不会生成 `LOCAL_THERMAL_FRAME_DETECTION` 上报事件。
 - SDK 回调会对所有报警事件输出通用诊断日志，包含 `lCommand`、十六进制事件号、数据长度和数据前缀；当前现场暂未确认测温报警事件号时，可用这些日志识别设备实际上传的报警类型。
