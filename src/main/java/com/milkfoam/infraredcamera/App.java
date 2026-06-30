@@ -38,12 +38,18 @@ public final class App {
     String cameraId = options.getOrDefault("camera-id", "cam-001");
     int channel = Integer.parseInt(options.getOrDefault("channel", "2"));
     int fireBrightnessThreshold = Integer.parseInt(options.getOrDefault("fire-brightness-threshold", "245"));
+    boolean customFireMaskEnabled = parseOnOff(options.getOrDefault("custom-fire-mask", "on"), "custom-fire-mask");
 
     FireEventBus eventBus = new FireEventBus();
     FireSnapshotStore snapshotStore = new FireSnapshotStore();
     LiveFrameStore liveFrameStore = new LiveFrameStore();
     FireEventSource source = createSource(mode, options, cameraId, channel, fireBrightnessThreshold, snapshotStore, liveFrameStore);
-    FireDetectionHttpServer httpServer = new FireDetectionHttpServer(eventBus, snapshotStore, liveFrameStore, httpPort);
+    FireDetectionHttpServer httpServer = new FireDetectionHttpServer(
+        eventBus,
+        snapshotStore,
+        liveFrameStore,
+        httpPort,
+        customFireMaskEnabled);
     ThingsBoardTelemetryClient thingsBoardClient = new ThingsBoardTelemetryClient(new ThingsBoardConfig(
         options.get("thingsboard-host"),
         options.get("thingsboard-token")));
@@ -71,6 +77,7 @@ public final class App {
     detectionLogger.scheduleAtFixedRate(() -> logDetectionStatus(latestFireTime), 0, 5, TimeUnit.SECONDS);
     System.out.println("热成像火点检测服务已启动");
     System.out.println("模式: " + mode);
+    System.out.println("前端自绘红色像素: " + (customFireMaskEnabled ? "开启" : "关闭"));
     System.out.println("访问: http://127.0.0.1:" + httpServer.port() + "/");
     new CountDownLatch(1).await();
   }
@@ -135,6 +142,16 @@ public final class App {
     }
     String deviceIp = options.getOrDefault("device-ip", "192.168.1.64");
     return new MockFireEventSource(cameraId, channel, deviceIp);
+  }
+
+  private static boolean parseOnOff(String value, String name) {
+    if ("on".equalsIgnoreCase(value)) {
+      return true;
+    }
+    if ("off".equalsIgnoreCase(value)) {
+      return false;
+    }
+    throw new IllegalArgumentException("--" + name + " must be on or off");
   }
 
   private static String required(Map<String, String> options, String name) {

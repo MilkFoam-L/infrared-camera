@@ -11,6 +11,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class FireDetectionHttpServer implements AutoCloseable {
@@ -23,19 +24,33 @@ public final class FireDetectionHttpServer implements AutoCloseable {
   private final FireEventBus eventBus;
   private final FireSnapshotStore snapshotStore;
   private final LiveFrameStore liveFrameStore;
+  private final boolean customFireMaskEnabled;
   private final HttpServer server;
+  private final ExecutorService executor;
 
   public FireDetectionHttpServer(
       FireEventBus eventBus,
       FireSnapshotStore snapshotStore,
       LiveFrameStore liveFrameStore,
       int port) throws IOException {
+    this(eventBus, snapshotStore, liveFrameStore, port, true);
+  }
+
+  public FireDetectionHttpServer(
+      FireEventBus eventBus,
+      FireSnapshotStore snapshotStore,
+      LiveFrameStore liveFrameStore,
+      int port,
+      boolean customFireMaskEnabled) throws IOException {
     this.eventBus = eventBus;
     this.snapshotStore = snapshotStore;
     this.liveFrameStore = liveFrameStore;
+    this.customFireMaskEnabled = customFireMaskEnabled;
     this.server = HttpServer.create(new InetSocketAddress("127.0.0.1", port), 0);
-    this.server.setExecutor(Executors.newCachedThreadPool());
+    this.executor = Executors.newCachedThreadPool();
+    this.server.setExecutor(executor);
     this.server.createContext("/", this::handleStatic);
+    this.server.createContext("/api/runtime-config", this::handleRuntimeConfig);
     this.server.createContext("/api/live-frame", this::handleLiveFrame);
     this.server.createContext("/api/fire-events/latest", this::handleLatest);
     this.server.createContext("/api/fire-events/stream", this::handleStream);
@@ -53,6 +68,7 @@ public final class FireDetectionHttpServer implements AutoCloseable {
   @Override
   public void close() {
     server.stop(0);
+    executor.shutdownNow();
   }
 
   private void handleStatic(HttpExchange exchange) throws IOException {
@@ -70,6 +86,11 @@ public final class FireDetectionHttpServer implements AutoCloseable {
       default -> "application/octet-stream";
     };
     sendBytes(exchange, 200, contentType, bytes);
+  }
+
+  private void handleRuntimeConfig(HttpExchange exchange) throws IOException {
+    String json = "{\"customFireMaskEnabled\":" + customFireMaskEnabled + "}";
+    sendText(exchange, 200, "application/json; charset=utf-8", json);
   }
 
   private void handleLatest(HttpExchange exchange) throws IOException {

@@ -3,18 +3,15 @@ package com.milkfoam.infraredcamera.hikvision;
 import com.milkfoam.infraredcamera.fire.FireDetectionEvent;
 import com.milkfoam.infraredcamera.fire.FireSnapshotStore;
 import com.milkfoam.infraredcamera.fire.LiveFrameStore;
-import com.milkfoam.infraredcamera.fire.ThermalImageFireDetector;
 import com.milkfoam.infraredcamera.runtime.FireEventSource;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import java.nio.charset.StandardCharsets;
-import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public final class HikvisionFireEventSource implements FireEventSource {
@@ -24,7 +21,6 @@ public final class HikvisionFireEventSource implements FireEventSource {
   private final LiveFrameStore liveFrameStore;
   private final int minFireBrightness;
   private final HCNetSdkLibrary sdk;
-  private final AtomicInteger localDetectionSequence = new AtomicInteger();
   private final ExecutorService callbackExecutor = Executors.newSingleThreadExecutor(r -> {
     Thread thread = new Thread(r, "hikvision-fire-callback-worker");
     thread.setDaemon(true);
@@ -98,10 +94,13 @@ public final class HikvisionFireEventSource implements FireEventSource {
     }
 
     queryThermalCapabilities();
-    System.out.println("本地火点亮度阈值：" + minFireBrightness + "，低于该阈值不会触发红色标注和 ThingsBoard 上报");
+    System.out.println("本地抓图只用于 /api/live-frame 实时画面显示，不再作为 ThingsBoard 上报依据");
+    System.out.println("前端自绘红色像素展示阈值：" + minFireBrightness + "，仅用于页面 mask 展示");
     callback = (lCommand, pAlarmer, pAlarmInfo, dwBufLen, pUser) -> {
+      logSdkAlarm(lCommand, pAlarmInfo, dwBufLen);
       if (lCommand == HCNetSdkLibrary.COMM_FIREDETECTION_ALARM) {
-        System.out.println("收到摄像头内置火点报警但已忽略：当前使用本地热成像画面检测逻辑");
+        FireDetectionEvent event = mapAlarm(pAlarmInfo);
+        callbackExecutor.execute(() -> eventConsumer.accept(event));
       }
     };
 
@@ -123,7 +122,7 @@ public final class HikvisionFireEventSource implements FireEventSource {
         userId,
         config.thermalChannel(),
         liveFrameStore,
-        detection -> callbackExecutor.execute(() -> eventConsumer.accept(toLocalDetectionEvent(detection))),
+        detection -> { },
         minFireBrightness);
     snapshotClient.start();
     thermometryClient = new HikvisionRealtimeThermometryClient(sdk, userId);
@@ -187,30 +186,31 @@ public final class HikvisionFireEventSource implements FireEventSource {
     }
   }
 
-  private FireDetectionEvent toLocalDetectionEvent(ThermalImageFireDetector.DetectedFire detection) {
-    String eventId = String.format(Locale.ROOT, "local-frame-fire-%06d", localDetectionSequence.incrementAndGet());
-    System.out.println("本地热成像画面检测到火点：事件ID=" + eventId
-        + "，亮度=" + String.format(Locale.ROOT, "%.1f", detection.brightness())
-        + "，标红阈值=" + detection.brightnessThreshold()
-        + "，像素数=" + detection.pixelCount()
-        + "，范围=x=" + String.format(Locale.ROOT, "%.4f", detection.rect().x())
-        + "，y=" + String.format(Locale.ROOT, "%.4f", detection.rect().y())
-        + "，宽=" + String.format(Locale.ROOT, "%.4f", detection.rect().width())
-        + "，高=" + String.format(Locale.ROOT, "%.4f", detection.rect().height()));
-    return new FireDetectionEvent(
-        eventId,
-        config.cameraId(),
-        config.thermalChannel(),
-        config.host(),
-        "local_thermal_frame_detection",
-        OffsetDateTime.now(),
-        detection.brightness(),
-        0.0,
-        detection.rect(),
-        detection.highestPoint(),
-        detection.brightnessThreshold(),
-        "",
-        "LOCAL_THERMAL_FRAME_DETECTION");
+  private void logSdkAlarm(int lCommand, Pointer pAlarmInfo, int dwBufLen) {
+    String commandName = lCommand == HCNetSdkLibrary.COMM_FIREDETECTION_ALARM
+        ? "COMM_FIREDETECTION_ALARM"
+        : "UNKNOWN_SDK_ALARM";
+    System.out.println("收到海康 SDK 报警事件：lCommand=" + lCommand
+        + "，hex=0x" + Integer.toHexString(lCommand).toUpperCase(Locale.ROOT)
+        + "，名称=" + commandName
+        + "，数据长度=" + dwBufLen
+        + "，数据前缀=" + alarmHexPrefix(pAlarmInfo, dwBufLen));
+  }
+
+  private String alarmHexPrefix(Pointer pAlarmInfo, int dwBufLen) {
+    if (pAlarmInfo == null || Pointer.nativeValue(pAlarmInfo) == 0 || dwBufLen <= 0) {
+      return "无";
+    }
+    int length = Math.min(dwBufLen, 32);
+    byte[] bytes = pAlarmInfo.getByteArray(0, length);
+    StringBuilder builder = new StringBuilder(length * 3);
+    for (int i = 0; i < bytes.length; i++) {
+      if (i > 0) {
+        builder.append(' ');
+      }
+      builder.append(String.format(Locale.ROOT, "%02X", Byte.toUnsignedInt(bytes[i])));
+    }
+    return builder.toString();
   }
 
   private FireDetectionEvent mapAlarm(Pointer pAlarmInfo) {

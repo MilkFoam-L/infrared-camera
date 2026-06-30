@@ -667,6 +667,10 @@ public interface HCNetSdkLibrary extends Library {
     public byte cTimeDifferenceM;
     public byte[] byRes = new byte[49];
 
+    public NET_DVR_FIREDETECTION_ALARM() {
+      dwSize = size();
+    }
+
     public NET_DVR_FIREDETECTION_ALARM(Pointer pointer) {
       super(pointer);
       read();

@@ -675,3 +675,34 @@
 - `target/infrared-camera-1.0.0.jar`：重新打包后的服务器运行包。
 - `progress.md`：追加本轮变更记录。
 - 回滚方式：使用 `git revert <本次提交>` 回滚本轮提示定位改动；或恢复上述文件到本轮修改前版本后重新执行 `mvn package`。
+
+## 2026-06-30 - Task: 改为使用海康 SDK 报警作为上报依据
+
+### What was done
+- 将真实设备模式的上报来源改回海康 SDK 报警事件，不再使用本地热成像图片亮度检测结果触发 ThingsBoard 上报。
+- 恢复 `COMM_FIREDETECTION_ALARM` 处理，收到后转换为统一火点事件，继续推送网页并上报 ThingsBoard。
+- 对所有 SDK 报警事件输出通用诊断日志，包含事件号、十六进制事件号、数据长度和数据前缀，便于现场确认测温报警实际事件类型。
+- 保留 `/api/live-frame` 实时画面接口，热成像抓图只用于前端实时画面刷新，不再执行本地亮度检测或生成本地上报事件。
+- 新增运行时配置接口和启动参数，`CUSTOM_FIRE_MASK=on` 时保留前端自绘红色像素，`CUSTOM_FIRE_MASK=off` 时关闭自绘层并隐藏红色像素值按钮，只显示摄像头原始画面。
+- 更新实施文档，明确 `FIRE_BRIGHTNESS_THRESHOLD` 只作为自绘 mask 展示阈值，不再决定是否上报。
+
+### Testing
+- 已先执行 TDD 红灯测试：`mvn -Dtest=HikvisionThermalSnapshotClientTest,HikvisionFireEventSourceTest test`，结果按预期失败，证明旧逻辑仍会本地亮度检测且 SDK 火点报警仍被忽略。
+- 本轮实现后尝试执行 `mvn -Dtest=HikvisionThermalSnapshotClientTest,HikvisionFireEventSourceTest,FireDetectionHttpServerTest test`，当前 Git Bash 返回 `mvn: command not found`，未能完成复测。
+- 已尝试查找仓库内 Maven Wrapper，结果未找到 `mvnw`；后续需要在本机恢复 Maven/Java 命令可用后执行 `mvn test` 和 `mvn package`。
+
+### Notes
+- `src/main/java/com/milkfoam/infraredcamera/hikvision/HikvisionThermalSnapshotClient.java`：抓图成功后只写入实时画面仓库，不再调用本地亮度检测器。
+- `src/main/java/com/milkfoam/infraredcamera/hikvision/HikvisionFireEventSource.java`：恢复 SDK 火点报警事件分发，并增加 SDK 报警通用诊断日志。
+- `src/main/java/com/milkfoam/infraredcamera/hikvision/HCNetSdkLibrary.java`：为火点报警结构体无参构造补齐 `dwSize` 初始化，便于测试和结构体写入。
+- `src/main/java/com/milkfoam/infraredcamera/App.java`：新增 `--custom-fire-mask=on/off` 参数，并将开关传给 HTTP 服务。
+- `src/main/java/com/milkfoam/infraredcamera/web/FireDetectionHttpServer.java`：新增 `/api/runtime-config`，向前端返回红色像素自绘开关，并在关闭服务时释放 HTTP 线程池。
+- `src/main/resources/web/index.html`：红色像素值按钮默认隐藏并禁用，等待运行时配置决定是否显示。
+- `src/main/resources/web/app.js`：启动时读取运行时配置，关闭自绘层时不绘制 mask、不显示按钮、不保留旧提示。
+- `start-hikvision-fire-detection.bat`：新增 `CUSTOM_FIRE_MASK=off` 默认配置并传给 Java，同时调整脚本文案避免把亮度阈值描述为上报阈值。
+- `src/test/java/com/milkfoam/infraredcamera/hikvision/HikvisionThermalSnapshotClientTest.java`：新增抓图不触发本地亮度检测的测试。
+- `src/test/java/com/milkfoam/infraredcamera/hikvision/HikvisionFireEventSourceTest.java`：新增 SDK 火点报警会分发统一事件的测试。
+- `src/test/java/com/milkfoam/infraredcamera/web/FireDetectionHttpServerTest.java`：新增运行时配置接口测试。
+- `docs/thermal-fire-detection-plan.md`：同步真实设备运行逻辑、开关说明、通用 SDK 报警日志和验收项。
+- `progress.md`：追加本轮变更记录。
+- 回滚方式：使用 `git diff` 确认本轮改动后，恢复上述文件到本轮修改前版本；若后续已提交，则使用 `git revert <本次提交>` 回滚。

@@ -15,6 +15,7 @@ let latestEvent = null;
 let latestMaskStats = null;
 let fadeTimer = null;
 let clearTimer = null;
+let customFireMaskEnabled = true;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -56,6 +57,10 @@ function resizeMask() {
 }
 
 function drawFireMask(event) {
+  if (!customFireMaskEnabled) {
+    clearFireMask();
+    return;
+  }
   if (!liveFrame.complete || liveFrame.naturalWidth === 0 || liveFrame.naturalHeight === 0) {
     return;
   }
@@ -149,6 +154,17 @@ function drawFireMask(event) {
   fireMask.classList.remove('hidden', 'fading');
 }
 
+function clearFireMask() {
+  window.clearTimeout(fadeTimer);
+  window.clearTimeout(clearTimer);
+  resizeMask();
+  fireMaskContext.clearRect(0, 0, fireMask.width, fireMask.height);
+  latestMaskStats = null;
+  thresholdStatus.classList.add('hidden');
+  fireMask.classList.add('hidden');
+  fireMask.classList.remove('fading');
+}
+
 function thresholdMessage(event) {
   if (!event) {
     return '当前还没有火点事件，暂时没有红色像素。';
@@ -172,6 +188,9 @@ function showThresholdStatus(message, stats) {
 }
 
 async function showCurrentThreshold() {
+  if (!customFireMaskEnabled) {
+    return;
+  }
   if (latestEvent) {
     drawFireMask(latestEvent);
     showThresholdStatus(thresholdMessage(latestEvent), latestMaskStats);
@@ -196,18 +215,16 @@ async function showCurrentThreshold() {
 
 function renderEvent(event) {
   latestEvent = event;
-  drawFireMask(event);
+  if (!customFireMaskEnabled) {
+    clearFireMask();
+    return;
+  }
 
+  drawFireMask(event);
   window.clearTimeout(fadeTimer);
   window.clearTimeout(clearTimer);
   fadeTimer = window.setTimeout(() => fireMask.classList.add('fading'), 2200);
-  clearTimer = window.setTimeout(() => {
-    fireMaskContext.clearRect(0, 0, fireMask.width, fireMask.height);
-    latestMaskStats = null;
-    thresholdStatus.classList.add('hidden');
-    fireMask.classList.add('hidden');
-    fireMask.classList.remove('fading');
-  }, 5200);
+  clearTimer = window.setTimeout(clearFireMask, 5200);
 }
 
 function refreshLiveFrame() {
@@ -217,6 +234,26 @@ function refreshLiveFrame() {
 function connectStream() {
   const source = new EventSource('/api/fire-events/stream');
   source.addEventListener('fire', (message) => renderEvent(JSON.parse(message.data)));
+}
+
+async function loadRuntimeConfig() {
+  try {
+    const response = await fetch('/api/runtime-config');
+    const config = await response.json();
+    customFireMaskEnabled = config.customFireMaskEnabled !== false;
+  } catch (error) {
+    customFireMaskEnabled = true;
+  }
+
+  if (customFireMaskEnabled) {
+    thresholdTestButton.disabled = false;
+    thresholdTestButton.classList.remove('hidden');
+    return;
+  }
+
+  thresholdTestButton.disabled = true;
+  thresholdTestButton.classList.add('hidden');
+  clearFireMask();
 }
 
 async function loadLatest() {
@@ -244,12 +281,24 @@ thresholdTestButton.addEventListener('click', () => {
 });
 
 window.addEventListener('resize', () => {
+  if (!customFireMaskEnabled) {
+    return;
+  }
   if (latestEvent) {
     drawFireMask(latestEvent);
   }
 });
 
-refreshLiveFrame();
-window.setInterval(refreshLiveFrame, 1000);
-loadLatest().catch(() => {});
-connectStream();
+async function start() {
+  await loadRuntimeConfig();
+  refreshLiveFrame();
+  window.setInterval(refreshLiveFrame, 1000);
+  await loadLatest().catch(() => {});
+  connectStream();
+}
+
+start().catch(() => {
+  refreshLiveFrame();
+  window.setInterval(refreshLiveFrame, 1000);
+  connectStream();
+});

@@ -4,9 +4,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.milkfoam.infraredcamera.fire.FireDetectionEvent;
 import com.milkfoam.infraredcamera.fire.FireSnapshotStore;
 import com.milkfoam.infraredcamera.fire.LiveFrameStore;
+import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 class HikvisionFireEventSourceTest {
@@ -29,6 +35,32 @@ class HikvisionFireEventSourceTest {
   }
 
   @Test
+  void dispatchesSdkFireDetectionAlarm() throws InterruptedException {
+    FakeSdk sdk = new FakeSdk();
+    HikvisionFireEventSource source = new HikvisionFireEventSource(config(), new FireSnapshotStore(), new LiveFrameStore(), sdk);
+    List<FireDetectionEvent> events = new ArrayList<>();
+    CountDownLatch delivered = new CountDownLatch(1);
+    source.start(event -> {
+      events.add(event);
+      delivered.countDown();
+    });
+
+    Pointer alarmPointer = fireAlarmPointer();
+    sdk.fireAlarmCallback.invoke(
+        HCNetSdkLibrary.COMM_FIREDETECTION_ALARM,
+        new HCNetSdkLibrary.NET_DVR_ALARMER(),
+        alarmPointer,
+        new HCNetSdkLibrary.NET_DVR_FIREDETECTION_ALARM(alarmPointer).size(),
+        Pointer.NULL);
+
+    assertTrue(delivered.await(1, TimeUnit.SECONDS));
+    assertEquals(1, events.size());
+    assertEquals("fire_detection", events.get(0).eventType());
+    assertEquals("COMM_FIREDETECTION_ALARM", events.get(0).rawCommand());
+    assertEquals(86.0, events.get(0).maxTemperature());
+  }
+
+  @Test
   void stopsRealtimeThermometryBeforeCleaningUpSdk() {
     FakeSdk sdk = new FakeSdk();
     LiveFrameStore liveFrameStore = new LiveFrameStore();
@@ -39,6 +71,34 @@ class HikvisionFireEventSourceTest {
 
     assertEquals(77, sdk.stoppedRemoteConfigHandle);
     assertTrue(sdk.cleanedUp);
+  }
+
+  private static Pointer fireAlarmPointer() {
+    HCNetSdkLibrary.NET_DVR_FIREDETECTION_ALARM alarm = new HCNetSdkLibrary.NET_DVR_FIREDETECTION_ALARM();
+    alarm.dwAbsTime = pack(2026, 6, 28, 10, 30, 12);
+    alarm.struDevInfo.byChannel = 2;
+    alarm.struDevInfo.byIvmsChannel = 2;
+    alarm.wFireMaxTemperature = 860;
+    alarm.wTargetDistance = 12;
+    alarm.struRect.fX = 0.4f;
+    alarm.struRect.fY = 0.2f;
+    alarm.struRect.fWidth = 0.1f;
+    alarm.struRect.fHeight = 0.2f;
+    alarm.struPoint.fX = 0.45f;
+    alarm.struPoint.fY = 0.3f;
+    alarm.write();
+    Memory memory = new Memory(alarm.size());
+    memory.write(0, alarm.getPointer().getByteArray(0, alarm.size()), 0, alarm.size());
+    return memory;
+  }
+
+  private static int pack(int year, int month, int day, int hour, int minute, int second) {
+    return ((year - 2000) << 26)
+        | (month << 22)
+        | (day << 17)
+        | (hour << 12)
+        | (minute << 6)
+        | second;
   }
 
   private static HikvisionClientConfig config() {
@@ -59,6 +119,7 @@ class HikvisionFireEventSourceTest {
     private int remoteConfigChannel;
     private int remoteConfigRuleId;
     private FRemoteConfigCallback remoteConfigCallback;
+    private FMSGCallBack_V50 fireAlarmCallback;
     private int stoppedRemoteConfigHandle = -1;
     private boolean cleanedUp;
 
@@ -121,6 +182,7 @@ class HikvisionFireEventSourceTest {
         int iIndex,
         FMSGCallBack_V50 fMessageCallBack,
         Pointer pUser) {
+      fireAlarmCallback = fMessageCallBack;
       return true;
     }
 

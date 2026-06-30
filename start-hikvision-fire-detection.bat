@@ -16,6 +16,7 @@ set "CAMERA_USER=admin"
 set "CAMERA_PASSWORD=aa123456"
 set "THERMAL_CHANNEL=2"
 set "FIRE_BRIGHTNESS_THRESHOLD=245"
+set "CUSTOM_FIRE_MASK=off"
 set "HTTP_PORT=8765"
 set "THINGSBOARD_HOST=192.168.1.78:8080"
 set "THINGSBOARD_TOKEN=Re7fUx8Zrr6tl69BARLZ"
@@ -35,6 +36,7 @@ echo SDK_DLL=%SDK_DLL% >> "%LOG_FILE%"
 echo CAMERA_HOST=%CAMERA_HOST% >> "%LOG_FILE%"
 echo THERMAL_CHANNEL=%THERMAL_CHANNEL% >> "%LOG_FILE%"
 echo FIRE_BRIGHTNESS_THRESHOLD=%FIRE_BRIGHTNESS_THRESHOLD% >> "%LOG_FILE%"
+echo CUSTOM_FIRE_MASK=%CUSTOM_FIRE_MASK% >> "%LOG_FILE%"
 echo THINGSBOARD_HOST=%THINGSBOARD_HOST% >> "%LOG_FILE%"
 
 if not exist "%JAR%" (
@@ -80,7 +82,8 @@ if "%THINGSBOARD_TOKEN%"=="PLEASE_SET_THINGSBOARD_TOKEN" (
 echo Camera host: %CAMERA_HOST%
 echo SDK port: %CAMERA_PORT%
 echo Thermal channel: %THERMAL_CHANNEL%
-echo Fire brightness threshold: %FIRE_BRIGHTNESS_THRESHOLD%
+echo Fire mask brightness threshold: %FIRE_BRIGHTNESS_THRESHOLD%
+echo Custom fire mask: %CUSTOM_FIRE_MASK%
 echo Local page: http://127.0.0.1:%HTTP_PORT%/
 echo SDK DLL: %SDK_DLL%
 echo ThingsBoard: http://%THINGSBOARD_HOST%
@@ -94,7 +97,7 @@ echo.
 echo ===== %DATE% %TIME% java start ===== >> "%LOG_FILE%"
 java -version >> "%LOG_FILE%" 2>&1
 
-call java -jar "%JAR%" --mode=hikvision --http-port=%HTTP_PORT% --camera-id=%CAMERA_ID% --host=%CAMERA_HOST% --port=%CAMERA_PORT% --username=%CAMERA_USER% --password="%CAMERA_PASSWORD%" --channel=%THERMAL_CHANNEL% --fire-brightness-threshold=%FIRE_BRIGHTNESS_THRESHOLD% --sdk-lib="%SDK_DLL%" --thingsboard-host="%THINGSBOARD_HOST%" --thingsboard-token="%THINGSBOARD_TOKEN%"
+call java -jar "%JAR%" --mode=hikvision --http-port=%HTTP_PORT% --camera-id=%CAMERA_ID% --host=%CAMERA_HOST% --port=%CAMERA_PORT% --username=%CAMERA_USER% --password="%CAMERA_PASSWORD%" --channel=%THERMAL_CHANNEL% --fire-brightness-threshold=%FIRE_BRIGHTNESS_THRESHOLD% --custom-fire-mask=%CUSTOM_FIRE_MASK% --sdk-lib="%SDK_DLL%" --thingsboard-host="%THINGSBOARD_HOST%" --thingsboard-token="%THINGSBOARD_TOKEN%"
 set "APP_EXIT_CODE=%ERRORLEVEL%"
 
 echo.

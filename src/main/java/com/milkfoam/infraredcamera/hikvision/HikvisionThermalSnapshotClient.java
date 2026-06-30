@@ -5,7 +5,6 @@ import com.milkfoam.infraredcamera.fire.ThermalImageFireDetector;
 import com.sun.jna.Memory;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -15,17 +14,13 @@ public final class HikvisionThermalSnapshotClient implements AutoCloseable {
 
   private static final int DEFAULT_BUFFER_SIZE = 512 * 1024;
   private static final long DEFAULT_INTERVAL_MILLIS = 1000L;
-  private static final long MIN_DETECTION_INTERVAL_MILLIS = 5000L;
 
   private final HCNetSdkLibrary sdk;
   private final int userId;
   private final int channelId;
   private final LiveFrameStore liveFrameStore;
-  private final Consumer<ThermalImageFireDetector.DetectedFire> detectionConsumer;
   private final int bufferSize;
-  private final int minFireBrightness;
   private ScheduledExecutorService executor;
-  private long lastDetectionAtMillis;
 
   public HikvisionThermalSnapshotClient(
       HCNetSdkLibrary sdk,
@@ -78,9 +73,8 @@ public final class HikvisionThermalSnapshotClient implements AutoCloseable {
     this.userId = userId;
     this.channelId = channelId;
     this.liveFrameStore = Objects.requireNonNull(liveFrameStore, "liveFrameStore");
-    this.detectionConsumer = Objects.requireNonNull(detectionConsumer, "detectionConsumer");
+    Objects.requireNonNull(detectionConsumer, "detectionConsumer");
     this.bufferSize = bufferSize;
-    this.minFireBrightness = minFireBrightness;
   }
 
   public synchronized void start() {
@@ -120,22 +114,8 @@ public final class HikvisionThermalSnapshotClient implements AutoCloseable {
       byte[] bytes = buffer.getByteArray(0, Math.min(returnedSize[0], bufferSize));
       byte[] frameBytes = Arrays.copyOf(bytes, bytes.length);
       liveFrameStore.save("image/jpeg", frameBytes);
-      detectFire(frameBytes);
       return true;
     }
-  }
-
-  private void detectFire(byte[] frameBytes) {
-    long now = System.currentTimeMillis();
-    if (now - lastDetectionAtMillis < MIN_DETECTION_INTERVAL_MILLIS) {
-      return;
-    }
-    Optional<ThermalImageFireDetector.DetectedFire> detected = ThermalImageFireDetector.detect(frameBytes, minFireBrightness);
-    if (detected.isEmpty()) {
-      return;
-    }
-    lastDetectionAtMillis = now;
-    detectionConsumer.accept(detected.get());
   }
 
   @Override

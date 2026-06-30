@@ -134,9 +134,9 @@ Java 接入路径：
 1. 后端通过 `NET_DVR_CaptureJPEGPicture_NEW` 从热成像通道抓取 JPEG，并通过 `/api/live-frame` 提供最新画面。
 2. 前端每秒刷新 `/api/live-frame`，页面主体只展示摄像头热成像画面。
 3. 通过 `EventSource` 连接 `/api/fire-events/stream`。
-4. 接收火点事件后以前端画布读取真实画面像素，只在报警区域内按后端事件携带的同一个 `fireBrightnessThreshold` 把火源轮廓像素标为红色。
-5. `rect.x/y/width/height` 只作为火源像素搜索范围，不再直接绘制整块矩形框；没有后端火点事件就不会出现红色像素。
-6. 新报警刷新红色像素标注，旧标注短时间后变淡并清除；页面不再显示右侧报警信息面板。
+4. 前端红色像素自绘层由启动参数控制：`--custom-fire-mask=on` 时继续按报警区域和 `fireBrightnessThreshold` 自绘红色像素，`--custom-fire-mask=off` 时关闭自绘层，仅展示 `/api/live-frame` 返回的摄像头原始画面。
+5. `fireBrightnessThreshold` 不再作为是否上报 ThingsBoard 的依据；它只在开启自绘红色像素时作为页面 mask 展示阈值。
+6. SDK 报警事件才是上报来源；没有 SDK 报警事件时不会因为本地画面亮度生成上报事件。
 
 ### 第六步：启动实时测温长连接
 
@@ -237,6 +237,7 @@ java -jar target/infrared-camera-1.0.0.jar \
   --username=admin \
   --password=<设备密码> \
   --channel=2 \
+  --custom-fire-mask=off \
   --sdk-lib=C:/path/to/HCNetSDK.dll \
   --thingsboard-host=192.168.1.78:8080 \
   --thingsboard-token=<设备访问令牌>
@@ -245,13 +246,13 @@ java -jar target/infrared-camera-1.0.0.jar \
 说明：
 
 - 服务器只需 `git pull` 获取最新代码、`target/infrared-camera-1.0.0.jar` 和 `EN-HCNetSDKV6.1.9.4_build20220412_win64/lib/`，无需先安装 Maven 打包或手动拷贝 SDK 即可运行脚本。
-- `start-hikvision-fire-detection.bat` 顶部的 `FIRE_BRIGHTNESS_THRESHOLD` 是火点亮度阈值，默认 `245`；人的热源如果低于该阈值不会触发红色像素标注和 ThingsBoard 上报。
-- 后端每次检测会把实际用于报警的 `fireBrightnessThreshold` 写入事件，前端红色像素绘制直接使用该阈值，不再使用另一套前端阈值，确保有红色像素时就是已报警/已上报的同源火点事件。
-- 页面主体只展示 `/api/live-frame` 返回的热成像抓图，红色像素标注会按火源高亮轮廓叠加在真实画面上；右上角“显示红色像素值”按钮会在当前红色像素区域附近展示实际标红像素中的最低亮度、最高亮度、红色像素数量，并附带判定阈值作对照。
+- `start-hikvision-fire-detection.bat` 顶部的 `CUSTOM_FIRE_MASK` 控制前端是否自绘红色像素：`off` 表示关闭自绘层、只看摄像头原始画面；`on` 表示保留自绘红色像素层。
+- `start-hikvision-fire-detection.bat` 顶部的 `FIRE_BRIGHTNESS_THRESHOLD` 只在 `CUSTOM_FIRE_MASK=on` 时作为前端自绘红色像素的展示阈值，不再决定是否向 ThingsBoard 上报。
+- 页面主体始终展示 `/api/live-frame` 返回的热成像抓图；`CUSTOM_FIRE_MASK=off` 时右上角“显示红色像素值”按钮隐藏，若摄像头原始画面自带红点则直接显示原图中的红点；`CUSTOM_FIRE_MASK=on` 时按钮会在当前红色像素区域附近展示实际标红像素中的最低亮度、最高亮度、红色像素数量，并附带判定阈值作对照。
 - 当前抓图刷新为秒级刷新，不是 25fps 视频流；如需低延迟视频，后续需要单独接 RTSP 转 HLS/WebRTC。
-- 真实设备模式不再依赖海康 SDK 火点报警事件触发上报；后端会在每次抓取热成像 JPEG 后自行分析高亮热源像素区域，并排除顶部时间/星期、右下角 Camera 等 OSD 叠字区域，同时过滤显示器这类大块规则矩形亮屏和极细竖线高亮伪影；只有确认的火焰高亮区域达到 `FIRE_BRIGHTNESS_THRESHOLD` 配置阈值后，才生成 `LOCAL_THERMAL_FRAME_DETECTION` 事件。
-- 收到本地热成像画面检测事件后会先更新本地页面，再异步向 ThingsBoard 上报遥测；未配置 `--thingsboard-host` 或 `--thingsboard-token` 时不上报云端。
-- 启动窗口会实时显示 Java 输出；程序每 5 秒输出一条中文火点检测状态日志，画面出现高亮候选区域时会输出图片尺寸、阈值、像素范围、像素宽高、宽高占比、竖向宽高比、填充率和过滤原因；画面检测到火源时输出中文火点事件明细。
+- 真实设备模式重新以海康 SDK 报警事件作为上报依据：收到 `COMM_FIREDETECTION_ALARM` 后转换为统一 `FireDetectionEvent`，推送网页并向 ThingsBoard 上报；热成像 JPEG 抓图只用于刷新 `/api/live-frame`，不再执行本地亮度检测，也不会生成 `LOCAL_THERMAL_FRAME_DETECTION` 上报事件。
+- SDK 回调会对所有报警事件输出通用诊断日志，包含 `lCommand`、十六进制事件号、数据长度和数据前缀；当前现场暂未确认测温报警事件号时，可用这些日志识别设备实际上传的报警类型。
+- 启动窗口会实时显示 Java 输出；程序每 5 秒输出一条中文火点检测状态日志；收到 SDK 报警时输出报警事件号和火点事件明细。
 - 控制台会输出中文 ThingsBoard 上传开关、目标地址、事件 ID、请求 JSON、响应状态码、响应体和异常栈，便于排查为什么未上传成功。
 - `thingsboard上报.txt` 是手工验证 ThingsBoard 链路的 Python 调试脚本，ThingsBoard 地址和设备访问令牌直接在文件顶部变量中配置，不读取电脑环境变量。
 - ThingsBoard 上报地址格式：`http://<thingsboard-host>/api/v1/<thingsboard-token>/telemetry`。
@@ -272,7 +273,7 @@ java -jar target/infrared-camera-1.0.0.jar \
 - [x] 火点事件模型包含摄像头、通道、设备 IP、时间、最高温、距离、矩形框、最高温点和原始命令。
 - [x] 后端可通过 `/api/fire-events/latest` 返回最新火点事件。
 - [x] 后端可通过 `/api/fire-events/stream` 使用 SSE 推送实时火点事件。
-- [x] 页面可根据归一化坐标限定搜索范围，并按热成像画面高亮轮廓绘制红色像素标注。
+- [x] 页面可根据运行时配置选择是否自绘红色像素；关闭时只展示摄像头原始画面。
 - [x] 后端可通过 `/api/live-frame` 返回最新热成像画面；真实设备模式由 SDK 周期抓取热成像通道 JPEG。
 - [x] 收到火点事件后可向 ThingsBoard 上报 `warning_flag`、`warning_status` 和火点遥测字段。
 - [x] 真实 SDK 火点报警中的热成像抓拍图可保存到快照仓库，并通过 `/api/fire-events/<eventId>/snapshot` 访问。
@@ -285,7 +286,7 @@ java -jar target/infrared-camera-1.0.0.jar \
 - [x] 提供摄像头 IP、端口、账号和热成像通道号；密码由启动脚本运行时输入。
 - [ ] 查询设备热成像能力并确认支持火点检测。
 - [ ] 配置火点检测、报警上传和布防时间。
-- [ ] 收到真实 `COMM_FIREDETECTION_ALARM`。
+- [ ] 收到真实 `COMM_FIREDETECTION_ALARM` 或通过通用 SDK 报警日志确认测温报警实际事件号。
 - [ ] 保存真实报警 JSON 与抓拍图。
 - [ ] 对照真实抓拍图人工确认火点框位置准确。
 - [ ] 验证断线重连、服务重启恢复布防和多摄像头不串台。
